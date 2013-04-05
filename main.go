@@ -3,6 +3,7 @@ package main
 import (
     "log"
     "github.com/trendrr/cheshire-golang/cheshire"
+        "github.com/trendrr/cheshire-golang/partition"
     "github.com/dustismo/cheshire-balancer/balancer"
     "flag"
 
@@ -23,6 +24,8 @@ func main() {
     
     balancer.Servs.DataDir = *dataDir
     balancer.Servs.Load()
+
+    balancer.Servs.SetRouterTable(partition.NewRouterTable("Test"))
 
     //
     log.Println("Starting")

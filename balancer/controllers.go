@@ -13,11 +13,8 @@ func init() {
 func Index(request *cheshire.Request, conn *cheshire.HtmlConnection) {
     //create a context map to be passed to the template
     context := make(map[string]interface{})
-
     context["services"] = Servs.RouterTables()
-
-    //TODO: need to use index.html
-    conn.RenderInLayout("/public/index.html", "/layouts/base.html", context)
+    conn.RenderInLayout("/index.html", "/template.html", context)
 }
 
 func NewService(request *cheshire.Request, conn *cheshire.HtmlConnection) {

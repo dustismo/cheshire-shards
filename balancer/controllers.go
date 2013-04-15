@@ -6,6 +6,7 @@ import (
 
 func init() {
     cheshire.RegisterHtml("/", "GET", Index)
+    cheshire.RegisterHtml("/new", "POST", NewService)
 }
 
 //an example html page
@@ -13,8 +14,13 @@ func Index(request *cheshire.Request, conn *cheshire.HtmlConnection) {
     //create a context map to be passed to the template
     context := make(map[string]interface{})
 
-    context["services"] = ""
+    context["services"] = Servs.RouterTables()
 
     //TODO: need to use index.html
     conn.RenderInLayout("/public/index.html", "/layouts/base.html", context)
+}
+
+func NewService(request *cheshire.Request, conn *cheshire.HtmlConnection) {
+
+
 }

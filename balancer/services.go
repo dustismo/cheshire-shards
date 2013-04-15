@@ -4,7 +4,7 @@ import (
     // "log"
     "github.com/trendrr/cheshire-golang/dynmap"
     "github.com/trendrr/cheshire-golang/partition"
-
+    "sort"
     "fmt"
     "io/ioutil"
 )
@@ -63,4 +63,28 @@ func (this *Services) Save() error {
 func (this *Services) SetRouterTable(table *partition.RouterTable) {
     this.services[table.Service] = table
     this.Save()
+}
+
+func (this *Services) RouterTable(service string) (*partition.RouterTable, bool) {
+    t, ok := this.services[service]
+    return t,ok
+}
+
+// Returns a sorted list of the available router tables.
+func (this *Services) RouterTables() ([]*partition.RouterTable) {
+    tables := make([]*partition.RouterTable, 0)
+    var keys []string
+    for k,_ := range(this.services) {
+        keys = append(keys, k)
+    }
+    sort.Strings(keys)
+    for _,k := range(keys) {
+        v, ok := this.services[k]
+        if !ok {
+            continue
+        }
+        tables = append(tables, v)
+    }
+    return tables
+
 }

@@ -5,6 +5,7 @@ import (
     "github.com/trendrr/cheshire-golang/cheshire"
         "github.com/trendrr/cheshire-golang/partition"
     "github.com/dustismo/cheshire-balancer/balancer"
+    "github.com/trendrr/cheshire-golang/cheshire/impl/gocache"
     "flag"
 
 )
@@ -22,6 +23,10 @@ func main() {
     flag.Parse()
     bootstrap := cheshire.NewBootstrapFile(*configFilename)
     
+    //Setup our cache.  this uses the local cache 
+    cache := gocache.New(10, 10)
+    bootstrap.AddFilters(cheshire.NewSession(cache, 3600))
+
     balancer.Servs.DataDir = *dataDir
     balancer.Servs.Load()
 

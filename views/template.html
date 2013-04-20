@@ -40,7 +40,15 @@
     </div>
   </div>
     <div role="main">
+      <div class="container">
+        {{#flash}}
+            <div class="alert alert-{{severity}}">
+                <a class="close" data-dismiss="alert">×</a>
+                {{message}}
+            </div>
+        {{/flash}}
         {{{content}}}
+      </div>
     </div>
     <footer>
 
@@ -51,12 +59,5 @@
   <script src="//cdnjs.cloudflare.com/ajax/libs/underscore.js/1.4.4/underscore-min.js"></script>
   <script src="//cdnjs.cloudflare.com/ajax/libs/backbone.js/1.0.0/backbone-min.js"></script>
   <script src="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/2.3.1/js/bootstrap.min.js"></script>
-
-    <script>
-        var _gaq=[['_setAccount','UA-XXXXX-X'],['_trackPageview']];
-        (function(d,t){var g=d.createElement(t),s=d.getElementsByTagName(t)[0];
-        g.src=('https:'==location.protocol?'//ssl':'//www')+'.google-analytics.com/ga.js';
-        s.parentNode.insertBefore(g,s)}(document,'script'));
-    </script>
 </body>
 </html>

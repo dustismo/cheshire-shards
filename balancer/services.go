@@ -7,6 +7,7 @@ import (
     "sort"
     "fmt"
     "io/ioutil"
+    "log"
 )
 
 
@@ -39,7 +40,11 @@ func (this *Services) Load() error {
         if !ok {
             continue
         }
-        table, _ := partition.ToRouterTable(rt)
+        table, err := partition.ToRouterTable(rt)
+        if err != nil {
+            log.Println(err)
+            continue
+        }
         this.services[k] = table
     }
     return nil
@@ -58,6 +63,22 @@ func (this *Services) Save() error {
     }
     err = ioutil.WriteFile(fmt.Sprintf("%s/%s",this.DataDir, "services.json"), bytes, 0644)
     return err
+}
+
+//Will create and save a new router table. 
+func (this *Services) NewRouterTable(service string, totalPartitions int, repFactor int) error {
+    
+    _, ok := this.RouterTable(service)
+    if ok {
+        //already exists
+        return fmt.Errorf("Router Table %s already exists!", service)
+    }
+
+    rt := partition.NewRouterTable(service)
+    rt.TotalPartitions = totalPartitions
+    rt.ReplicationFactor= repFactor
+    this.SetRouterTable(rt)
+    return nil
 }
 
 func (this *Services) SetRouterTable(table *partition.RouterTable) {

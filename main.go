@@ -7,7 +7,8 @@ import (
     "github.com/dustismo/cheshire-balancer/balancer"
     "github.com/trendrr/cheshire-golang/cheshire/impl/gocache"
     "flag"
-
+    "time"
+    "fmt"
 )
 
 
@@ -34,6 +35,16 @@ func main() {
 
     //
     log.Println("Starting")
+    go func() {
+        c := time.Tick(5 * time.Second)
+        for now := range c {
+            str := fmt.Sprintf("%v %s\n", now, "Something something")
+            balancer.Servs.Logger.Emit("test", str)
+            balancer.Servs.Logger.Println("TESTING LOG")
+        }    
+    }()
+    
+
     //starts listening on all configured interfaces
     bootstrap.Start()
     

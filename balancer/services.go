@@ -4,20 +4,24 @@ import (
     // "log"
     "github.com/trendrr/cheshire-golang/dynmap"
     "github.com/trendrr/cheshire-golang/partition"
+    "github.com/trendrr/cheshire-golang/cheshire"
     "sort"
     "fmt"
     "io/ioutil"
     "log"
+    "sync"
 )
-
 
 type Services struct {
     DataDir string
     services map[string]*partition.RouterTable
+    Logger *cheshire.Logger
+    lock sync.Mutex
 }
 
 var Servs = &Services{
     services : make(map[string]*partition.RouterTable),
+    Logger : cheshire.NewLogger(),
 }
 
 func (this *Services) Load() error {

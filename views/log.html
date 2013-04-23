@@ -1,0 +1,27 @@
+<div class="well">
+    <div id="logcontainer"></div>
+</div>
+
+<script>
+  $(document).ready(function() {
+    console.log("HERE")
+    strest = new Strest(
+              "ws://localhost:8010/ws",
+              function(event) {
+                $('#logcontainer').append("<div>CONNECTED</div>")
+                //register for the log messages
+                strest.sendRequest({
+                    uri : '/api/log'
+                  },
+                  function(response) {
+                    $('#logcontainer').append("<div>" + response.event.message + "</div>")
+                  }
+                );
+              },
+              function(event) {
+                $('#logcontainer').html("NOT CONNECTED")
+              }
+            );
+  });
+
+</script>

@@ -10,6 +10,7 @@ func init() {
     cheshire.RegisterHtml("/", "GET", Index)
     cheshire.RegisterHtml("/new", "POST", NewService)
     cheshire.RegisterHtml("/rt/edit", "GET", Service)
+    cheshire.RegisterHtml("/log", "GET", Log)
 }
 
 //an example html page
@@ -18,6 +19,10 @@ func Index(txn *cheshire.Txn) {
     context := make(map[string]interface{})
     context["services"] = Servs.RouterTables()
     cheshire.RenderInLayout(txn, "/index.html", "/template.html", context)
+}
+
+func Log(txn *cheshire.Txn) {
+    cheshire.RenderInLayout(txn, "/log.html", "/template.html", nil)
 }
 
 func NewService(txn *cheshire.Txn) {

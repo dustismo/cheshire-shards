@@ -4,7 +4,7 @@ import (
     // "log"
     "github.com/trendrr/cheshire-golang/dynmap"
     "github.com/trendrr/cheshire-golang/partition"
-    "github.com/trendrr/cheshire-golang/cheshire"
+    clog "github.com/trendrr/cheshire-golang/log"
     "sort"
     "fmt"
     "io/ioutil"
@@ -15,7 +15,7 @@ import (
 type Services struct {
     DataDir string
     services map[string]*partition.RouterTable
-    Logger *cheshire.Logger
+    Logger *clog.Logger
     lock sync.Mutex
 }
 

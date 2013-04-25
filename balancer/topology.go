@@ -69,7 +69,7 @@ func MovePartition(services *Services, routerTable *RouterTable, partition int, 
         case response := <- responseChan :
             //TODO: send the data to the toClient
             request := cheshire.NewRequest(partition.DATA_PUSH, "PUT")
-            d, ok := request.GetDynMap("data")
+            d, ok := response.GetDynMap("data")
             if !ok {
                 services.Logger.Printf("ERROR: packet missing data :: %s ", request)
                 continue
@@ -107,10 +107,32 @@ func MovePartition(services *Services, routerTable *RouterTable, partition int, 
         }
     }
 
-    // Now delete the data
+    // Now make sure we got responses for all the PUT data ops
+    count := 0
+    for toClient.CurrentInFlight > 1 {
+        services.Logger.Printf("NOW Waiting for success messages to complete")
+        select {
+            case response := <- toResponseChan :
+            //do nothing, 
+            case err := <- toErrorChan :
+                services.Logger.Printf("ERROR While Moving data to %s -- %s", to.Address, err)
+                return err
+            default
+                if count > 30 {
+                   services.Logger.Printf("GAH. Waited 30 seconds for completion.  there seems to be a problem,.")
+                   return fmt.Errorf("GAH. Waited 30 seconds for completion.  there seems to be a problem.") 
+                }
+                time.Sleep(1*time.Second) 
+        }
+        count++
+    }
 
+    //Delete the data on the from server.
+    request := cheshire.NewRequest(partition.PARTITION_DELETE, "DELETE")    
+    request.Params().Put("partition", partition)
 
-
+    services.Logger.Printf("NOW Deleting the partition from the origin server %s", from.Address)
+    response, err := fromClient.ApiCallSync(request, 300*time.Second)
 }
 
 // Checks with entries to see if an updated router table is available.

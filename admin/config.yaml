@@ -1,0 +1,13 @@
+http:
+   port: 8010
+   # Static files for serving js/css/ect for http only
+   static_files:
+      route: /static/
+      directory: static/
+   # Serve strest requests over websockets
+   websockets:
+      route: /ws
+   html:
+      view_directory: views
+json:
+   port: 8009

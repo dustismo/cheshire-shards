@@ -73,7 +73,8 @@ func (this *RouterTable) Rebuild() (*RouterTable, error) {
 // a new router table is returned.
 func (this *RouterTable) AddEntries(entry ... *RouterEntry) (*RouterTable, error) {
     entries := make([]*RouterEntry, 0)
-    for _, e := this.Entries {
+
+    for _, e := range(this.Entries) {
         //check if this entry matches any of the entries we are adding.
         found := false
         for _, en := range(entry) {
@@ -88,13 +89,22 @@ func (this *RouterTable) AddEntries(entry ... *RouterEntry) (*RouterTable, error
 
     //now add the new ones
     for _, en := range(entry) {
-        entries = append(entries, e)
+        entries = append(entries, en)
     }
     //TODO: umm, baaad. this should clone the current router table instead of modifying this
     this.Entries = entries
 
     rt, err := this.Rebuild()
     return rt, err
+}
+
+func (this *RouterTable) FindEntry(id string) (*RouterEntry, bool) {
+    for _, e := range(this.Entries) {
+        if e.Id() == id {
+            return e, true
+        }
+    }
+    return nil, false
 }
 
 // Creates a new router table from the dynmap passed in

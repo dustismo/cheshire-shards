@@ -152,8 +152,6 @@ func DataPull(txn *cheshire.Txn) {
         cheshire.SendError(txn, 406, fmt.Sprintf("partition param is manditory"))
         return   
     }
-
-    remove := txn.Params().MustBool("remove", false)
     dataChan := make(chan *dynmap.DynMap, 10)
     finishedChan := make(chan int)
     errorChan := make(chan error)
@@ -177,5 +175,5 @@ func DataPull(txn *cheshire.Txn) {
             }
         }
     }()
-    manager.partitioner.Data(part, remove, dataChan, finishedChan, errorChan)
+    manager.partitioner.Data(part, dataChan, finishedChan, errorChan)
 }

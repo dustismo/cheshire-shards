@@ -463,6 +463,6 @@ func (this *Manager) SetRouterTable(table *RouterTable) (*RouterTable, error){
 }
 
 func (this *Manager) createConnection(entry *RouterEntry) (cheshire.Client) {
-    c, _ := cheshire.NewJsonClient(entry.Address, entry.JsonPort)
+    c := cheshire.NewJsonClient(entry.Address, entry.JsonPort)
     return c
 }

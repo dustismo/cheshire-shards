@@ -13,6 +13,49 @@ import (
 // All the operations necessary for rebalance and topology changes
 
 
+// Locks the specified partition.
+// Note, this does NOT update the routertable 
+// it is assumed the router table is up to date.
+func LockPartition(services *Services, routerTable *shards.RouterTable, partition int) error {
+    return locking(shards.PARTITION_LOCK, services, routerTable, partition)
+}
+
+
+// Unlocks the specified partition.
+// Note, this does NOT update the routertable 
+// it is assumed the router table is up to date.
+func UnlockPartition(services *Services, routerTable *shards.RouterTable, partition int) error {
+    return locking(shards.PARTITION_UNLOCK, services, routerTable, partition)
+}
+
+
+// internal lock code shared by unlock and lock. (different endpoints)
+func locking(endpoint string, services *Services, routerTable *shards.RouterTable, partition int) error {
+    entries, err := routerTable.PartitionEntries(partition)
+    if err != nil {
+        return err
+    }
+
+    // Lock partitions
+    for _, e := range(entries) {
+        response, err := cheshire.HttpApiCallSync(
+            fmt.Sprintf("%s:%d", e.Address, e.HttpPort),
+            cheshire.NewRequest(endpoint, "GET"),
+            5 * time.Second)
+        if err != nil {
+            services.Logger.Printf("ERROR While contacting %s -- %s", e.Address, err)
+            //TODO: retry?
+            continue
+        }
+        if response.StatusCode() != 200 {
+            //TODO: retry?
+            services.Logger.Printf("ERROR While locking partition %s -- %s", e.Address, response.StatusMessage())
+        }
+    }
+    return nil
+}
+
+
 
 // Moves data from one server to another
 // Does the following:
@@ -29,26 +72,13 @@ func MovePartition(services *Services, routerTable *shards.RouterTable, partitio
     //update router table if needed
     routerTable, _ = RouterTableUpdate(services, routerTable, 3)
 
-    entries, err := routerTable.PartitionEntries(partition)
+    err := LockPartition(services, routerTable, partition)
     if err != nil {
         return err
     }
 
-    // Lock partitions
-    for _, e := range(entries) {
-        response, err := cheshire.HttpApiCallSync(
-            fmt.Sprintf("%s:%d", e.Address, e.HttpPort),
-            cheshire.NewRequest(shards.PARTITION_LOCK, "GET"),
-            5 * time.Second)
-        if err != nil {
-            services.Logger.Printf("ERROR While contacting %s -- %s", e.Address, err)
-            continue
-        }
-        if response.StatusCode() != 200 {
-            services.Logger.Printf("ERROR While locking partition %s -- %s", e.Address, response.StatusMessage())
-        }
-    }
-
+    //Unlock partition no matter what
+    defer UnlockPartition(services, routerTable, partition)
 
     //Move the data!
 
@@ -155,6 +185,12 @@ func MovePartition(services *Services, routerTable *shards.RouterTable, partitio
         count++
     }
 
+
+    //update the router table.
+
+
+
+
     //Delete the data on the from server.
     request = cheshire.NewRequest(shards.PARTITION_DELETE, "DELETE")    
     request.Params().Put("partition", partition)
@@ -164,6 +200,9 @@ func MovePartition(services *Services, routerTable *shards.RouterTable, partitio
     if response.StatusCode() != 200 {
         services.Logger.Printf("ERROR While deleting partition: %s", response.StatusMessage())
     }
+
+
+
 
     return nil
 }

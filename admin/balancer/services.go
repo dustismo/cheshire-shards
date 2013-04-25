@@ -1,9 +1,9 @@
 package balancer
 
 import (
-    // "log"
     "github.com/trendrr/cheshire-golang/dynmap"
-    "github.com/trendrr/cheshire-golang/partition"
+    // "github.com/trendrr/cheshire-golang/cheshire"
+    shards "github.com/dustismo/cheshire-shards/shards"
     clog "github.com/trendrr/cheshire-golang/log"
     "sort"
     "fmt"
@@ -14,14 +14,14 @@ import (
 
 type Services struct {
     DataDir string
-    services map[string]*partition.RouterTable
+    services map[string]*shards.RouterTable
     Logger *clog.Logger
     lock sync.Mutex
 }
 
 var Servs = &Services{
-    services : make(map[string]*partition.RouterTable),
-    Logger : cheshire.NewLogger(),
+    services : make(map[string]*shards.RouterTable),
+    Logger : clog.NewLogger(),
 }
 
 func (this *Services) Load() error {
@@ -44,7 +44,7 @@ func (this *Services) Load() error {
         if !ok {
             continue
         }
-        table, err := partition.ToRouterTable(rt)
+        table, err := shards.ToRouterTable(rt)
         if err != nil {
             log.Println(err)
             continue
@@ -70,7 +70,7 @@ func (this *Services) Save() error {
 }
 
 //Will create and save a new router table. 
-func (this *Services) NewRouterTable(service string, totalPartitions int, repFactor int) error {
+func (this *Services) NewRouterTable(service string, totalshards int, repFactor int) error {
     
     _, ok := this.RouterTable(service)
     if ok {
@@ -78,26 +78,26 @@ func (this *Services) NewRouterTable(service string, totalPartitions int, repFac
         return fmt.Errorf("Router Table %s already exists!", service)
     }
 
-    rt := partition.NewRouterTable(service)
-    rt.TotalPartitions = totalPartitions
+    rt := shards.NewRouterTable(service)
+    rt.TotalPartitions = totalshards
     rt.ReplicationFactor= repFactor
     this.SetRouterTable(rt)
     return nil
 }
 
-func (this *Services) SetRouterTable(table *partition.RouterTable) {
+func (this *Services) SetRouterTable(table *shards.RouterTable) {
     this.services[table.Service] = table
     this.Save()
 }
 
-func (this *Services) RouterTable(service string) (*partition.RouterTable, bool) {
+func (this *Services) RouterTable(service string) (*shards.RouterTable, bool) {
     t, ok := this.services[service]
     return t,ok
 }
 
 // Returns a sorted list of the available router tables.
-func (this *Services) RouterTables() ([]*partition.RouterTable) {
-    tables := make([]*partition.RouterTable, 0)
+func (this *Services) RouterTables() ([]*shards.RouterTable) {
+    tables := make([]*shards.RouterTable, 0)
     var keys []string
     for k,_ := range(this.services) {
         keys = append(keys, k)

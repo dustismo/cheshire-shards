@@ -3,8 +3,8 @@ package main
 import (
     "log"
     "github.com/trendrr/cheshire-golang/cheshire"
-        "github.com/trendrr/cheshire-golang/partition"
-    "github.com/dustismo/cheshire-balancer/balancer"
+    shards "github.com/dustismo/cheshire-shards/shards"
+    "github.com/dustismo/cheshire-shards/admin/balancer"
     "github.com/trendrr/cheshire-golang/cheshire/impl/gocache"
     "flag"
     "time"
@@ -31,7 +31,7 @@ func main() {
     balancer.Servs.DataDir = *dataDir
     balancer.Servs.Load()
 
-    balancer.Servs.SetRouterTable(partition.NewRouterTable("Test"))
+    balancer.Servs.SetRouterTable(shards.NewRouterTable("Test"))
 
     //
     log.Println("Starting")

@@ -2,6 +2,7 @@ package balancer
 
 import (
     "github.com/trendrr/cheshire-golang/cheshire"
+    clog "github.com/trendrr/cheshire-golang/log"
     "log"
     "fmt"
 )
@@ -13,7 +14,7 @@ func init() {
 // Gets any logging messages from the Servs.Events
 // sends to client
 func ConsoleLog(txn *cheshire.Txn) {
-    msgChan := make(chan cheshire.LoggerEvent, 10)
+    msgChan := make(chan clog.LoggerEvent, 10)
     Servs.Logger.Listen(msgChan)
     defer Servs.Logger.Unlisten(msgChan)
     log.Println("Log Listener Registered")

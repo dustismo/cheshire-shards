@@ -1,6 +1,15 @@
 package balancer
 
 
+import (
+    // "log"
+    "github.com/trendrr/cheshire-golang/cheshire"
+    shards "github.com/dustismo/cheshire-shards/shards"
+    "fmt"
+    // "io/ioutil"
+    "time"
+)
+
 // All the operations necessary for rebalance and topology changes
 
 
@@ -12,23 +21,31 @@ package balancer
 // 2. Move Data 
 // 3. Update router table on servers
 // 4. Unlock
-func MovePartition(services *Services, routerTable *RouterTable, partition int, from, to *RouterEntry) error {
+func MovePartition(services *Services, routerTable *shards.RouterTable, partition int, from, to *shards.RouterEntry) error {
     
 
-    entries := routerTable.PartitionEntries(partition)
-    
+
+
     //update router table if needed
-    routerTable, _ := RouterTableUpdate(routerTable, 3)
+    routerTable, _ = RouterTableUpdate(services, routerTable, 3)
+
+    entries, err := routerTable.PartitionEntries(partition)
+    if err != nil {
+        return err
+    }
 
     // Lock partitions
-    for e := range(routerTable.PartitionEntries(partition)) {
+    for _, e := range(entries) {
         response, err := cheshire.HttpApiCallSync(
             fmt.Sprintf("%s:%d", e.Address, e.HttpPort),
-            cheshire.NewRequest(partition.PARTITION_LOCK, "GET"),
+            cheshire.NewRequest(shards.PARTITION_LOCK, "GET"),
             5 * time.Second)
         if err != nil {
             services.Logger.Printf("ERROR While contacting %s -- %s", e.Address, err)
             continue
+        }
+        if response.StatusCode() != 200 {
+            services.Logger.Printf("ERROR While locking partition %s -- %s", e.Address, response.StatusMessage())
         }
     }
 
@@ -36,50 +53,53 @@ func MovePartition(services *Services, routerTable *RouterTable, partition int, 
     //Move the data!
 
     //create a new json connection
-    fromClient, err := cheshire.NewJsonClient(from.Address, from.JsonPort)
+    fromClient := cheshire.NewJsonClient(from.Address, from.JsonPort)
+    err = fromClient.Connect()
+    if err != nil {
+        return err
+    }
     defer fromClient.Close()
+    
+    toClient := cheshire.NewJsonClient(to.Address, to.JsonPort)
+    err = toClient.Connect()
     if err != nil {
         return err
     }
-
-    toClient, err := cheshire.NewJsonClient(to.Address, to.JsonPort)
     defer toClient.Close()
-    if err != nil {
-        return err
-    }
 
-    request := cheshire.NewRequest(partition.DATA_PULL, "GET")
+    request := cheshire.NewRequest(shards.DATA_PULL, "GET")
     request.Params().Put("partition", partition)
     
-    responseChan := make(chan *Response, 10)
+    responseChan := make(chan *cheshire.Response, 10)
     errorChan := make(chan error)
 
     fromClient.ApiCall(
         request,
         responseChan,
-        errorChan        
+        errorChan,
     )
+
     moved := 0
 
-    toResponseChan := make(chan *Response, 10)
+    toResponseChan := make(chan *cheshire.Response, 10)
     toErrorChan := make(chan error)
 
     for {
         select {
         case response := <- responseChan :
             //TODO: send the data to the toClient
-            request := cheshire.NewRequest(partition.DATA_PUSH, "PUT")
+            request := cheshire.NewRequest(shards.DATA_PUSH, "PUT")
             d, ok := response.GetDynMap("data")
             if !ok {
                 services.Logger.Printf("ERROR: packet missing data :: %s ", request)
                 continue
             }
-            request.Params().put("data", d)
-            request.Params().put("partition", partition)
+            request.Params().Put("data", d)
+            request.Params().Put("partition", partition)
             toClient.ApiCall(
                 request,
                 toResponseChan,
-                toErrorChan
+                toErrorChan,
             )
 
             // keep a log of items moved
@@ -100,6 +120,10 @@ func MovePartition(services *Services, routerTable *RouterTable, partition int, 
             return err
 
         case response := <- toResponseChan :
+            if response.StatusCode() != 200 {
+                services.Logger.Printf("ERROR While Moving data from %s -- %s.  \n Continuing...", from.Address, response.StatusMessage())
+            }
+
             //do nothing, 
         case err := <- toErrorChan :
             services.Logger.Printf("ERROR While Moving data to %s -- %s", to.Address, err)
@@ -109,15 +133,19 @@ func MovePartition(services *Services, routerTable *RouterTable, partition int, 
 
     // Now make sure we got responses for all the PUT data ops
     count := 0
-    for toClient.CurrentInFlight > 1 {
+    for toClient.CurrentInFlight() > 1 {
         services.Logger.Printf("NOW Waiting for success messages to complete")
         select {
             case response := <- toResponseChan :
             //do nothing, 
+                if response.StatusCode() != 200 {
+                    services.Logger.Printf("ERROR While Moving data to %s -- %s.  \n Continuing...", to.Address, response.StatusMessage())
+                }
+
             case err := <- toErrorChan :
                 services.Logger.Printf("ERROR While Moving data to %s -- %s", to.Address, err)
                 return err
-            default
+            default :
                 if count > 30 {
                    services.Logger.Printf("GAH. Waited 30 seconds for completion.  there seems to be a problem,.")
                    return fmt.Errorf("GAH. Waited 30 seconds for completion.  there seems to be a problem.") 
@@ -128,18 +156,23 @@ func MovePartition(services *Services, routerTable *RouterTable, partition int, 
     }
 
     //Delete the data on the from server.
-    request := cheshire.NewRequest(partition.PARTITION_DELETE, "DELETE")    
+    request = cheshire.NewRequest(shards.PARTITION_DELETE, "DELETE")    
     request.Params().Put("partition", partition)
 
     services.Logger.Printf("NOW Deleting the partition from the origin server %s", from.Address)
     response, err := fromClient.ApiCallSync(request, 300*time.Second)
+    if response.StatusCode() != 200 {
+        services.Logger.Printf("ERROR While deleting partition: %s", response.StatusMessage())
+    }
+
+    return nil
 }
 
 // Checks with entries to see if an updated router table is available.
-func RouterTableUpdate(routerTable *RouterTable, maxChecks int) (*RouterTable, bool) {
+func RouterTableUpdate(services *Services, routerTable *shards.RouterTable, maxChecks int) (*shards.RouterTable, bool) {
     checks := 0
-    updated = false
-    for e := range(routerTable.Entries) {
+    updated := false
+    for _,e := range(routerTable.Entries) {
         if checks >= maxChecks {
             break
         }
@@ -148,7 +181,7 @@ func RouterTableUpdate(routerTable *RouterTable, maxChecks int) (*RouterTable, b
         // make sure our routertable is up to date.
         response, err := cheshire.HttpApiCallSync(
             fmt.Sprintf("%s:%d", e.Address, e.HttpPort),
-            cheshire.NewRequest(partition.CHECKIN, "GET"),
+            cheshire.NewRequest(shards.CHECKIN, "GET"),
             5 * time.Second)
         if err != nil {
             services.Logger.Printf("ERROR While contacting %s -- %s", e.Address, err)
@@ -161,9 +194,9 @@ func RouterTableUpdate(routerTable *RouterTable, maxChecks int) (*RouterTable, b
         }
         services.Logger.Printf("Found updated router table at: %s", e.Address)
         //get the new routertable.
-        response, err := cheshire.HttpApiCallSync(
+        response, err = cheshire.HttpApiCallSync(
             fmt.Sprintf("%s:%d", e.Address, e.HttpPort),
-            cheshire.NewRequest(partition.ROUTERTABLE_GET, "GET"),
+            cheshire.NewRequest(shards.ROUTERTABLE_GET, "GET"),
             5 * time.Second)
         if err != nil {
             services.Logger.Printf("ERROR While contacting %s -- %s", e.Address, err)
@@ -175,7 +208,7 @@ func RouterTableUpdate(routerTable *RouterTable, maxChecks int) (*RouterTable, b
             continue   
         }
 
-        rt, err := partition.ToRouterTable(mp)
+        rt, err := shards.ToRouterTable(mp)
         if err != nil {
             services.Logger.Printf("ERROR While parsing router table %s -- %s", e.Address, err)
             continue

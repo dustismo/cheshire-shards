@@ -63,6 +63,7 @@ func (this *Services) Save() error {
 
     bytes,err := mp.MarshalJSON()
     if err != nil {
+        this.Logger.Printf("Error marshalling services table -- %s", err)
         return err
     }
     err = ioutil.WriteFile(fmt.Sprintf("%s/%s",this.DataDir, "services.json"), bytes, 0644)

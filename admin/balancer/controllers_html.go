@@ -43,7 +43,7 @@ func NewService(txn *cheshire.Txn) {
 }
 
 func Service(txn *cheshire.Txn) {
-        //create a context map to be passed to the template
+    //create a context map to be passed to the template
     context := make(map[string]interface{})
 
     service, ok := Servs.RouterTable(txn.Params().MustString("service", ""))

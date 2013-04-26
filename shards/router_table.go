@@ -71,10 +71,16 @@ func (this *RouterTable) Rebuild() (*RouterTable, error) {
 // Adds one or more new entries
 // These entries will replace any entries in the current routertable.
 // a new router table is returned.
-func (this *RouterTable) AddEntries(entry ... *RouterEntry) (*RouterTable, error) {
+func (this *RouterTable) AddEntries(entry ...*RouterEntry) (*RouterTable, error) {
+    //copy the router table
+    routerTable, err := this.Rebuild()
+    if err != nil {
+        return routerTable, err
+    }
+
     entries := make([]*RouterEntry, 0)
 
-    for _, e := range(this.Entries) {
+    for _, e := range(routerTable.Entries) {
         //check if this entry matches any of the entries we are adding.
         found := false
         for _, en := range(entry) {
@@ -91,11 +97,10 @@ func (this *RouterTable) AddEntries(entry ... *RouterEntry) (*RouterTable, error
     for _, en := range(entry) {
         entries = append(entries, en)
     }
-    //TODO: umm, baaad. this should clone the current router table instead of modifying this
-    this.Entries = entries
+    routerTable.Entries = entries
 
-    rt, err := this.Rebuild()
-    return rt, err
+    routerTable, err = this.Rebuild()
+    return routerTable, err
 }
 
 func (this *RouterTable) FindEntry(id string) (*RouterEntry, bool) {

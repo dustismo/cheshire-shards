@@ -20,7 +20,12 @@ const (
     //  "router_table" : <the router table>
     // }
     ROUTERTABLE_GET = "/__c/rt/get"
+
+    // Sets the router table on this server
+    // @method POST
+    // @param router_table The router table
     ROUTERTABLE_SET = "/__c/rt/set"
+    
     PARTITION_LOCK = "/__c/pt/lock"
     PARTITION_UNLOCK = "/__c/pt/unlock"
 

@@ -2,26 +2,61 @@
     <div id="logcontainer"></div>
 </div>
 
+
+
+{{=<% %>=}}
+<!-- Handlebars Template sections -->
+
+<!-- Log entry template -->
+
+<script id="log-template" type="text/x-handlebars-template">
+  <div id="logentry{{id}}" class="{{type}}" style="display:none">{{message}}</div>
+</script>
+<%={{ }}=%>
+
 <script>
+  var strest = null
+  var log = new Log({
+    container : "#logcontainer"
+  })
+
   $(document).ready(function() {
-    console.log("HERE")
-    strest = new Strest(
-              "ws://localhost:8010/ws",
-              function(event) {
-                $('#logcontainer').append("<div>CONNECTED</div>")
+    console.log($("#log-template").html())
+    // logTemplate = Handlebars.compile($("#log-template").html());
+    
+    strest = new Strest( {
+        url : "ws://localhost:8010/ws",
+        onopen : function(event) {
+                log.message("sysmsg", "CONNECTED!")
+                // $('#logcontainer').prepend(logTemplate({type : "sysmsg", message : "CONNECTED!"}))
                 //register for the log messages
                 strest.sendRequest({
                     uri : '/api/log'
                   },
                   function(response) {
-                    $('#logcontainer').append("<div>" + response.event.message + "</div>")
+                    log.message(response.event.type, response.event.message)
+                    // $('#logcontainer').prepend(logTemplate(response.event))
+
                   }
                 );
               },
-              function(event) {
-                $('#logcontainer').html("NOT CONNECTED")
-              }
-            );
+        onclose : function(event) {
+                log.message("sysmsg", "DISCONNECTED!")
+                
+                // $('#logcontainer').prepend(logTemplate({type : "sysmsg", message : "DISCONNECTED!"}))
+              },
+        keepalive : true
+    });
+
+    strest.connect()
   });
 
+  // function addLogEntry(type, message) {
+  //   i = logid++ 
+  //   $('#logcontainer').prepend(logTemplate({id : i, type : type, message : message}))
+  //   $('#logentry'+i).fadeIn()
+  //   $('#logentry' +(i-maxEntries)).fadeOut("normal", function(){
+  //     $(this).remove()
+  //   });
+  // }
 </script>

@@ -32,6 +32,7 @@ func ConsoleLog(txn *cheshire.Txn) {
             break   
         }
     }
+    close(msgChan)
     log.Println("Log Listener unregistered")
 }
 

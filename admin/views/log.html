@@ -22,41 +22,25 @@
 
   $(document).ready(function() {
     console.log($("#log-template").html())
-    // logTemplate = Handlebars.compile($("#log-template").html());
-    
     strest = new Strest( {
         url : "ws://localhost:8010/ws",
         onopen : function(event) {
                 log.message("sysmsg", "CONNECTED!")
-                // $('#logcontainer').prepend(logTemplate({type : "sysmsg", message : "CONNECTED!"}))
                 //register for the log messages
                 strest.sendRequest({
                     uri : '/api/log'
                   },
                   function(response) {
                     log.message(response.event.type, response.event.message)
-                    // $('#logcontainer').prepend(logTemplate(response.event))
-
                   }
                 );
               },
         onclose : function(event) {
                 log.message("sysmsg", "DISCONNECTED!")
-                
-                // $('#logcontainer').prepend(logTemplate({type : "sysmsg", message : "DISCONNECTED!"}))
               },
         keepalive : true
     });
 
     strest.connect()
   });
-
-  // function addLogEntry(type, message) {
-  //   i = logid++ 
-  //   $('#logcontainer').prepend(logTemplate({id : i, type : type, message : message}))
-  //   $('#logentry'+i).fadeIn()
-  //   $('#logentry' +(i-maxEntries)).fadeOut("normal", function(){
-  //     $(this).remove()
-  //   });
-  // }
 </script>

@@ -51,6 +51,15 @@ func NewRouterTable(service string) *RouterTable {
     }
 }
 
+// updates the revision to now
+func (this *RouterTable) UpdateRevision() (previous, current int64) {
+    prev := this.Revision
+    this.Revision = time.Now().Unix()
+    //reset the dynmap
+    this.DynMap = dynmap.NewDynMap()
+    return prev, this.Revision
+}
+
 //Rebuilds this router table, if you changed anything, you should call this and use the newly built 
 //table
 func (this *RouterTable) Rebuild() (*RouterTable, error) {
@@ -60,7 +69,7 @@ func (this *RouterTable) Rebuild() (*RouterTable, error) {
         total += len(e.Partitions)
     }
     this.TotalPartitions = total
-    mp := this.ToDynMap()
+    mp := this.toDynMap()
     table,err := ToRouterTable(mp)
     if err != nil {
         return nil, err
@@ -98,8 +107,8 @@ func (this *RouterTable) AddEntries(entry ...*RouterEntry) (*RouterTable, error)
         entries = append(entries, en)
     }
     routerTable.Entries = entries
-
-    routerTable, err = this.Rebuild()
+    routerTable.UpdateRevision()
+    routerTable, err = routerTable.Rebuild()
     return routerTable, err
 }
 
@@ -169,7 +178,7 @@ func ToRouterTable(mp *dynmap.DynMap) (*RouterTable, error) {
         return nil, fmt.Errorf("Bad table, some partitions un accounted for")
     }
 
-    t.DynMap = t.ToDynMap()
+    t.DynMap = t.toDynMap()
 
     t.EntriesPartition = make([][]*RouterEntry, t.TotalPartitions)
     //Now setup the replication partitions. 
@@ -193,6 +202,22 @@ func ToRouterTable(mp *dynmap.DynMap) (*RouterTable, error) {
     return t, nil
 }
 
+//internal use.
+//skips the cached version
+func (this *RouterTable) toDynMap() *dynmap.DynMap {
+    mp := dynmap.NewDynMap()
+    mp.Put("service", this.Service)
+    mp.Put("revision", this.Revision)
+    mp.Put("total_partitions", this.TotalPartitions)
+    mp.Put("replication_factor", this.ReplicationFactor)
+    entries := make([]*dynmap.DynMap, 0)
+    for _,e := range(this.Entries) {
+        entries = append(entries, e.ToDynMap())
+    }
+    mp.Put("entries", entries)
+    this.DynMap = mp
+    return mp
+}
 
 // Translate to a DynMap of the form:
 // {
@@ -208,18 +233,7 @@ func (this *RouterTable) ToDynMap() *dynmap.DynMap {
     if this.DynMap != nil && len(this.DynMap.Map) > 0 {
         return this.DynMap
     }
-    mp := dynmap.NewDynMap()
-    mp.Put("service", this.Service)
-    mp.Put("revision", this.Revision)
-    mp.Put("total_partitions", this.TotalPartitions)
-    mp.Put("replication_factor", this.ReplicationFactor)
-    entries := make([]*dynmap.DynMap, 0)
-    for _,e := range(this.Entries) {
-        entries = append(entries, e.ToDynMap())
-    }
-    mp.Put("entries", entries)
-    this.DynMap = mp
-    return mp
+   return this.toDynMap()
 }
 
 //gets the partitions that should replicate this master.
@@ -296,7 +310,7 @@ func ToRouterEntry(mp *dynmap.DynMap) (*RouterEntry, error) {
 
     e.Partitions, ok = mp.GetIntSlice("partitions")
     if !ok {
-        return nil, fmt.Errorf("No Partitions in Entry: %s", mp)
+        e.Partitions = make([]int, 0)
     }
     for _, p := range(e.Partitions) {
         e.PartitionsMap[p] = true

@@ -9,7 +9,7 @@ function Log(config) {
         entryId : "logentry"
     }, config);
     if (!this.config.template) {
-        this.config.template = Handlebars.compile("<div id=\"{{id}}\" class=\"{{type}}\" style=\"display:none\">{{message}}</div>");
+        this.config.template = Handlebars.compile("<div id=\"{{id}}\" class=\"log-{{type}}\" style=\"display:none\">{{message}}</div>");
     }
     this.id = 0
     //adds a new message

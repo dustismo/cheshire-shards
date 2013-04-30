@@ -10,6 +10,19 @@ import (
 
 func init() {
     cheshire.RegisterApi("/api/log", "GET", ConsoleLog)
+    cheshire.RegisterApi("/api/service", "GET", ServiceGet)
+    cheshire.RegisterApi("/api/shard/new", "PUT", ShardNew)
+}
+
+func ServiceGet(txn *cheshire.Txn) {
+    routerTable, ok := Servs.RouterTable(txn.Params().MustString("service", ""))
+    if !ok {
+        cheshire.SendError(txn, 406, "Service param missing or service not found")
+        return
+    }
+    res := cheshire.NewResponse(txn)
+    res.Put("router_table", routerTable.ToDynMap())
+    txn.Write(res)
 }
 
 // Gets any logging messages from the Servs.Events
@@ -32,18 +45,20 @@ func ConsoleLog(txn *cheshire.Txn) {
             break   
         }
     }
-    close(msgChan)
     log.Println("Log Listener unregistered")
 }
 
 // Creates a new shard.  Does not register any partitions to it, unless the router table has no entries. in which case this
 // gets all the partitions
-func NewShard(txn *cheshire.Txn) {
+func ShardNew(txn *cheshire.Txn) {
     routerTable, ok := Servs.RouterTable(txn.Params().MustString("service", ""))
+
     if !ok {
         cheshire.SendError(txn, 406, "Service param missing or service not found")
         return
     }
+
+    Servs.Logger.Printf("Creating new shard for service: %s", routerTable.Service)
 
     address, ok := txn.Params().GetString("address")
     if !ok {
@@ -90,6 +105,7 @@ func NewShard(txn *cheshire.Txn) {
         return
     }
 
+    Servs.Logger.Printf("Successfully created new entry: %s", entry)
 
     Servs.SetRouterTable(routerTable)
 

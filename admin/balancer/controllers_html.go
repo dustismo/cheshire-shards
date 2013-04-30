@@ -10,6 +10,7 @@ func init() {
     cheshire.RegisterHtml("/", "GET", Index)
     cheshire.RegisterHtml("/new", "POST", NewService)
     cheshire.RegisterHtml("/rt/edit", "GET", Service)
+    cheshire.RegisterHtml("/service", "GET", Service2)
     cheshire.RegisterHtml("/log", "GET", Log)
 }
 
@@ -40,6 +41,20 @@ func NewService(txn *cheshire.Txn) {
         cheshire.Flash(txn, "success", "successfully created router table")    
     }
     cheshire.Redirect(txn, "/index")
+}
+
+func Service2(txn *cheshire.Txn) {
+    //create a context map to be passed to the template
+    context := make(map[string]interface{})
+
+    service, ok := Servs.RouterTable(txn.Params().MustString("service", ""))
+    if !ok {
+        cheshire.Flash(txn, "error", fmt.Sprintf("Cant find service"))
+        cheshire.Redirect(txn, "/index")
+        return
+    }
+    context["service"] = service.Service 
+    cheshire.RenderInLayout(txn, "/service.html", "/template.html", context)
 }
 
 func Service(txn *cheshire.Txn) {

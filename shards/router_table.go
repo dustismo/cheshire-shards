@@ -47,6 +47,7 @@ func NewRouterTable(service string) *RouterTable {
         Service : service,
         DynMap : dynmap.NewDynMap(),
         Revision : time.Now().Unix(),
+        TotalPartitions : 0,
         ReplicationFactor : 2,
     }
 }

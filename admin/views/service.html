@@ -3,19 +3,14 @@
   <div class="span4">
     <!-- The service fields -->
     <div id="service"></div>
+    <button class="btn btn-primary" href="#newService" data-toggle="modal">New Entry</button>
   </div>
   <div class="span8">
     <!-- the log -->
     <div id="logcontainer" style="height:200px;overflow:auto;" class="well"></div>
   </div>
 </div>
-
-<div class="btn-toolbar">
-    <button class="btn btn-primary" href="#newService" data-toggle="modal">New Entry</button>
-    <!--<button class="btn">Import From Seed</button>-->
-</div>
-
-<div class="well" id="entries">
+<div id="entries">
 
 </div>
 
@@ -25,10 +20,33 @@
 
 <!-- Log entry template -->
 <script id="entries-template" type="text/x-handlebars-template">
-  <div id="logentry{{id}}" class="{{type}}" style="display:none">{{message}}</div>
 
-
-
+    <table id="user" class="table table-bordered table-striped" style="clear: both">
+      <tbody> 
+       <thead>
+        <tr>
+          <th>Id</th>
+          <th>Address</th>
+          <th>Http Port</th>
+          <th>Json Port</th>
+          <th>Partitions</th>
+        </tr>
+      </thead>
+        {{#entries}}
+          <tr>         
+              <td>{{id}}</td>
+              <td>{{address}}</td>
+              <td>{{ports.http}}</td>
+              <td>{{ports.json}}</td>
+              <td>
+                {{#each partitions}}
+                  <span>{{this}} ,</span> 
+                {{/each}}
+</td>
+          </tr>
+        {{/entries}}
+      </tbody>
+    </table>
 </script>
 
 <script id="service-template" type="text/x-handlebars-template">
@@ -84,6 +102,17 @@
               <p class="help-block">This should be Address of the new Shard.</p>
           </div>
       </div>
+      <div class="control-group">
+          <label class="control-label">Total Partitions</label>
+          <div class="controls">
+              <input id="total-partitions" name="total_partitions" type="number"
+              class="input-xlarge" value="512">
+              <p class="help-block">The total number of partitions for this service.  This value only
+                has an effect on the first entry.  This cannot be changed. choose wisely
+              </p>
+          </div>
+      </div>
+
       <div class="control-group">
           <label class="control-label">Http Port</label>
           <div class="controls">
@@ -141,6 +170,7 @@
   var RouterTableView = Backbone.View.extend({
         // Cache the template function for a single item.
     template: Handlebars.compile($('#service-template').html()),
+    entriesTemplate : Handlebars.compile($('#entries-template').html()),
 
     el: $("#service"),
 
@@ -167,62 +197,12 @@
       this.$el.html(this.template(this.model.attributes));
       console.log(this.$el.children("#service-name"))
       this.$el.find("#servicename").editable();
+      $("#entries").html(this.entriesTemplate(this.model.attributes))
       return this;
     }
   });
 
   var RTView = new RouterTableView({model : RT});
-
-  // var EntriesView = Backbone.View.extend({
-  //   template: Handlebars.compile($('#entries-template').html()),
-  //   target: '#entries',
-  //   events: {
-  //     'click .clear-button': 'clearLogBtnClick'
-  //   },
-  //   initialize: function(params) {
-  //     this.setElement($('#console'));
-  //     this.collection = LogCollection();
-  //     this.collection.on('add', this.renderItem, this);
-  //     this.collection.on('reset', this.clearLog, this);
-  //     this.initStrest();
-  //   },
-  //   initStrest: function() {
-  //     this.strest = new Strest(
-  //       "ws://localhost:8010/ws",
-  //       function(event) {
-  //         $('#alert').append("<div>CONNECTED</div>")
-  //         //register for the log messages
-  //         strest.sendRequest({
-  //           uri: '/api/log'
-  //         },
-   
-  //         function(response) {
-  //           this.collection.add(new LogItemModel(response.data))
-  //         });
-  //       },
-   
-  //       function(event) {
-  //         $('#alert').html("NOT CONNECTED")
-  //       }
-  //     );
-  //   },
-  //   renderItem: function(item){
-  //     if(this.collection.length > this.maxSize){
-  //       this.collection.models = this.collection.models.slice(0, this.maxSize)
-  //     }
-  //     $(this.target).prepend(this.template({
-  //       item: item.toJSON()
-  //     }));
-  //     return this;
-  //   },
-  //   clearLogBtnClick: function(event) {
-  //     this.collection.reset();
-  //   },
-  //   clearLog: function() {
-  //     this.target.html('');
-  //   }
-  // });
-
 
   $(document).ready(function() {
     console.log($("#log-template").html())
@@ -267,9 +247,8 @@
         console.log("ERROR! " + response.getStatusMessage())
         return;
       }
-      //give it to the 
+      //re-render that shit.
       RT.set(RT.parse(response, {}))
-
     },
     function(err) {
       //error

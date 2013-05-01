@@ -25,6 +25,23 @@ func ServiceGet(txn *cheshire.Txn) {
     txn.Write(res)
 }
 
+
+// Handles the rebalance operation. 
+// will push an updated router table everytime it changes.
+func Rebalance(txn *cheshire.Txn) {
+    // routerTable, ok := Servs.RouterTable(txn.Params().MustString("service", ""))
+    // if !ok {
+    //     cheshire.SendError(txn, 406, "Service param missing or service not found")
+    //     return
+    // }
+
+    
+
+
+
+
+}
+
 // Gets any logging messages from the Servs.Events
 // sends to client
 func ConsoleLog(txn *cheshire.Txn) {
@@ -90,15 +107,25 @@ func ShardNew(txn *cheshire.Txn) {
 
 
     if len(routerTable.Entries) == 0 {
+        totalPartitions, ok := txn.Params().GetInt("total_partitions")
+        if !ok {
+            cheshire.SendError(txn, 406, "total_partitions param is manditory for the first entry")
+            return
+        }
+
         //first entry, giving it all the partitions
+        Servs.Logger.Printf("First Entry! giving it all %d partitions", totalPartitions)
         partitions := make([]int, 0)
-        for p := 0; p < routerTable.TotalPartitions; p++ {
+        for p := 0; p < totalPartitions; p++ {
             partitions = append(partitions, p)
         }
         entry.Partitions = partitions
     } else {
         // not the first entry, 
     }
+
+    Servs.Logger.Printf("First Entry! %s", entry.Partitions)
+    
     routerTable, err := routerTable.AddEntries(entry)
     if err != nil {
         cheshire.SendError(txn, 501, fmt.Sprintf("Error on add entry %s", err))

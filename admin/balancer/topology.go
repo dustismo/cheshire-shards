@@ -8,6 +8,7 @@ import (
     "fmt"
     // "io/ioutil"
     "time"
+    "math/rand"
 )
 
 // All the operations necessary for rebalance and topology changes
@@ -314,6 +315,50 @@ func MovePartition(services *Services, routerTable *shards.RouterTable, partitio
     if err != nil {
         return err
     }
+
+    return nil
+}
+
+// Moves a single partition from the largest entry to the smallest.  only
+// if the smallest entry is smaller then the rest.
+// if all entries are the same size, then a random entry is chosen
+func RebalanceSingle(services *Services, routerTable *shards.RouterTable) error {
+
+    var smallest *shards.RouterEntry = nil
+    var largest *shards.RouterEntry = nil
+
+    min := int(routerTable.TotalPartitions / len(routerTable.Entries))
+    services.Logger.Printf("Looking for entries with more then %d partitions", min)
+
+    //shuffle the entries array
+    entries := make([]*shards.RouterEntry, len(routerTable.Entries))
+    perm := rand.Perm(len(routerTable.Entries))
+    for i, v := range perm {
+        entries[v] = routerTable.Entries[i]
+    }
+
+    for _, entry := range(entries) {
+        if len(entry.Partitions) < min {
+            if smallest == nil {
+                smallest = entry
+            } else if len(entry.Partitions) < len(smallest.Partitions) {
+                smallest = entry
+            }
+
+            if largest == nil {
+                largest = entry
+            } else if len(entry.Partitions) > len(largest.Partitions) {
+                largest = entry
+            }
+        }
+    }
+    if smallest == nil || largest == nil {
+        services.Logger.Printf("Cluster appears to be balanced")
+        return nil
+    }
+
+    services.Logger.Printf("Moving from %s to %s", largest.Id(), smallest.Id())
+
 
     return nil
 }

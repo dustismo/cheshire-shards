@@ -95,6 +95,8 @@ func ShardNew(txn *cheshire.Txn) {
         return
     }
 
+
+
     entry := &shards.RouterEntry{
         Address : address,
         JsonPort : jsonPort,
@@ -102,8 +104,12 @@ func ShardNew(txn *cheshire.Txn) {
         Partitions : make([]int, 0),
     }
 
-
-
+    //check if we can connect!
+    _, _, err := EntryCheckin(routerTable, entry)
+    if err != nil {
+        cheshire.SendError(txn, 406, fmt.Sprintf("Unable to contact %s:%d Error(%s)", entry.Address, entry.HttpPort, err))
+        return
+    }
 
 
     if len(routerTable.Entries) == 0 {
@@ -126,7 +132,7 @@ func ShardNew(txn *cheshire.Txn) {
 
     Servs.Logger.Printf("First Entry! %s", entry.Partitions)
     
-    routerTable, err := routerTable.AddEntries(entry)
+    routerTable, err = routerTable.AddEntries(entry)
     if err != nil {
         cheshire.SendError(txn, 501, fmt.Sprintf("Error on add entry %s", err))
         return

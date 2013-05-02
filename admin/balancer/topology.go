@@ -9,6 +9,7 @@ import (
     // "io/ioutil"
     "time"
     "math/rand"
+    "log"
 )
 
 // All the operations necessary for rebalance and topology changes
@@ -78,6 +79,68 @@ func DeletePartition(services *Services, entry *shards.RouterEntry, partition in
     return nil
 }
 
+// Checkin to an entry.  will update their router table if it is out of date.  will update our router table if out of date.
+func EntryCheckin(routerTable *shards.RouterTable, entry *shards.RouterEntry) (*shards.RouterTable, bool, error) {
+        // make sure our routertable is up to date.
+        response, err := cheshire.HttpApiCallSync(
+            fmt.Sprintf("%s:%d", entry.Address, entry.HttpPort),
+            cheshire.NewRequest(shards.CHECKIN, "GET"),
+            5 * time.Second)
+        if err != nil {
+            return routerTable, false, fmt.Errorf("ERROR While contacting %s -- %s", entry.Address, err)
+        }
+
+        rev := response.MustInt64("rt_revision", 0)
+        if rev == routerTable.Revision {
+            return routerTable, false, nil
+        }
+
+        if rev < routerTable.Revision {
+            //updating server.
+            //set the new routertable.
+            req := cheshire.NewRequest(shards.ROUTERTABLE_SET, "POST")
+            req.Params().Put("router_table", req.ToDynMap())
+
+            response, err = cheshire.HttpApiCallSync(
+                fmt.Sprintf("%s:%d", entry.Address, entry.HttpPort),
+                req,
+                5 * time.Second)
+            if err != nil {
+                return routerTable, false, fmt.Errorf("ERROR While contacting for router table update %s -- %s", entry.Address, err)
+            }
+            if response.StatusCode() != 200 {
+                return routerTable, false, fmt.Errorf("Error trying to Set router table %s -- %s", entry.Address, response.StatusMessage())
+            }
+        } else {
+            //updating local 
+
+            log.Printf("Found updated router table at: %s", entry.Address)
+            //get the new routertable.
+            response, err = cheshire.HttpApiCallSync(
+                fmt.Sprintf("%s:%d", entry.Address, entry.HttpPort),
+                cheshire.NewRequest(shards.ROUTERTABLE_GET, "GET"),
+                5 * time.Second)
+            if err != nil {
+                return routerTable, false, fmt.Errorf("ERROR While contacting %s -- %s", entry.Address, err)
+            }
+            mp, ok := response.GetDynMap("router_table")
+            if !ok {
+                return routerTable, false, fmt.Errorf("ERROR from %s -- BAD ROUTER TABLE RESPONSE %s", entry.Address, response)
+            }
+
+            rt, err := shards.ToRouterTable(mp)
+            if err != nil {
+                return routerTable, false, fmt.Errorf("ERROR While parsing router table %s -- %s", entry.Address, err)
+            }
+
+            log.Printf("SUCCESSFULLY update router table to revision %d", rt.Revision)
+            routerTable = rt
+            return routerTable, true, nil
+
+        } 
+        return routerTable, false, nil
+} 
+
 // Checks with entries to see if an updated router table is available.
 // Will update router table on server if local is newer
 // returns true if local was updated, or at least one server was updated.
@@ -90,72 +153,16 @@ func RouterTableUpdate(services *Services, routerTable *shards.RouterTable, maxC
         }
 
         checks++
-        // make sure our routertable is up to date.
-        response, err := cheshire.HttpApiCallSync(
-            fmt.Sprintf("%s:%d", e.Address, e.HttpPort),
-            cheshire.NewRequest(shards.CHECKIN, "GET"),
-            5 * time.Second)
+
+        rt, ud, err := EntryCheckin(routerTable, e)
         if err != nil {
-            services.Logger.Printf("ERROR While contacting %s -- %s", e.Address, err)
+            services.Logger.Printf("%s", err)
             continue
         }
-
-        rev := response.MustInt64("rt_revision", 0)
-        if rev == routerTable.Revision {
-            continue
-        }
-
-        if rev < routerTable.Revision {
-            //updating server.
-            //set the new routertable.
-            req := cheshire.NewRequest(shards.ROUTERTABLE_SET, "POST")
-            req.Params().Put("router_table", req.ToDynMap())
-
-            response, err = cheshire.HttpApiCallSync(
-                fmt.Sprintf("%s:%d", e.Address, e.HttpPort),
-                req,
-                5 * time.Second)
-            if err != nil {
-                services.Logger.Printf("ERROR While contacting %s -- %s", e.Address, err)
-                continue
-            }
-            if response.StatusCode() != 200 {
-                services.Logger.Printf("Error trying to Set router table %s -- %s", e.Address, response.StatusMessage())
-                continue
-            }
-        } else {
-            //updating local 
-
-            services.Logger.Printf("Found updated router table at: %s", e.Address)
-            //get the new routertable.
-            response, err = cheshire.HttpApiCallSync(
-                fmt.Sprintf("%s:%d", e.Address, e.HttpPort),
-                cheshire.NewRequest(shards.ROUTERTABLE_GET, "GET"),
-                5 * time.Second)
-            if err != nil {
-                services.Logger.Printf("ERROR While contacting %s -- %s", e.Address, err)
-                continue
-            }
-            mp, ok := response.GetDynMap("router_table")
-            if !ok {
-                services.Logger.Printf("ERROR from %s -- BAD ROUTER TABLE RESPONSE %s", e.Address, response)
-                continue   
-            }
-
-            rt, err := shards.ToRouterTable(mp)
-            if err != nil {
-                services.Logger.Printf("ERROR While parsing router table %s -- %s", e.Address, err)
-                continue
-            }
-
-            services.Logger.Printf("SUCCESSFULLY update router table to revision %d", rt.Revision)
+        if ud {
             updated = true
             routerTable = rt
-
-
-        } 
-
-
+        }
     }
     return routerTable, updated
 }

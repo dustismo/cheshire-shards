@@ -240,24 +240,24 @@
       method : "PUT",
       params : params
     }, 
-    function(response) {
-      //success
-      if (response.getStatusCode() != 200) {
-        //uhh, error!
-        console.log("ERROR! " + response.getStatusMessage())
-        return;
-      }
-      //re-render that shit.
-      RT.set(RT.parse(response, {}))
-    },
+    RTResponse,
     function(err) {
-      //error
-
+      log.message("error", err)
     })
 
     console.log(params);
   }
-
+  //the callback that includes the "router_table"  will trigger a rerender
+  RTResponse = function(response) {
+    //success
+    if (response.getStatusCode() != 200) {
+      //uhh, error!
+      log.message("error", response.getStatusMessage());
+      return;
+    }
+    //re-render that shit.
+    RT.set(RT.parse(response, {}))
+  }
   //override the backbone sync to use the strest connector
   Backbone.sync = function(method, model, options) {
 

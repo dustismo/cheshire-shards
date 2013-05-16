@@ -90,6 +90,8 @@ func EntryCheckin(routerTable *shards.RouterTable, entry *shards.RouterEntry) (*
             return routerTable, false, fmt.Errorf("ERROR While contacting %s -- %s", entry.Address, err)
         }
 
+        entry.LastSeenAt = time.Now()
+        
         rev := response.MustInt64("rt_revision", 0)
         if rev == routerTable.Revision {
             return routerTable, false, nil

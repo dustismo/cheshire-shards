@@ -105,12 +105,13 @@ func ShardNew(txn *cheshire.Txn) {
     }
 
     //check if we can connect!
-    _, _, err := EntryCheckin(routerTable, entry)
-    if err != nil {
-        cheshire.SendError(txn, 406, fmt.Sprintf("Unable to contact %s:%d Error(%s)", entry.Address, entry.HttpPort, err))
-        return
-    }
-
+    Servs.Logger.Printf("Attempting to connect to new entry...")
+    // _, _, err := EntryCheckin(routerTable, entry)
+    // if err != nil {
+    //     cheshire.SendError(txn, 406, fmt.Sprintf("Unable to contact %s:%d Error(%s)", entry.Address, entry.HttpPort, err))
+    //     return
+    // }
+    Servs.Logger.Printf("Success!")
 
     if len(routerTable.Entries) == 0 {
         totalPartitions, ok := txn.Params().GetInt("total_partitions")
@@ -129,16 +130,14 @@ func ShardNew(txn *cheshire.Txn) {
     } else {
         // not the first entry, 
     }
-
-    Servs.Logger.Printf("First Entry! %s", entry.Partitions)
     
-    routerTable, err = routerTable.AddEntries(entry)
+    routerTable, err := routerTable.AddEntries(entry)
     if err != nil {
         cheshire.SendError(txn, 501, fmt.Sprintf("Error on add entry %s", err))
         return
     }
 
-    Servs.Logger.Printf("Successfully created new entry: %s", entry)
+    Servs.Logger.Printf("Successfully created new entry: %s", entry.Id())
 
     Servs.SetRouterTable(routerTable)
 

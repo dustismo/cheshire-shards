@@ -71,7 +71,7 @@ func NewManagerSeed(partitioner Partitioner, serviceName, dataDir, myEntryId str
     for _,url := range(seedHttpUrls) {
 
         client := cheshire.NewHttpClient(url)
-        tble, err := manager.RequestRouterTable(client)
+        tble, err := RequestRouterTable(client)
         client.Close()
         if err != nil {
             //found a table..  woot
@@ -230,29 +230,6 @@ func (this *Manager) Checkin(client cheshire.Client) (int64, error){
     }
     revision := response.MustInt64("router_table_revision", int64(0))
     return revision, nil
-}
-
-//Request a new router table for the given client
-//Does not call SetRouterTable
-func (this *Manager) RequestRouterTable(client cheshire.Client) (*RouterTable, error) {
-    response, err := client.ApiCallSync(cheshire.NewRequest("/chs/rt/get", "GET"), 10*time.Second)
-    if err != nil {
-        return nil, err
-    }
-    if response.StatusCode() != 200 {
-        return nil, fmt.Errorf("Error from server %d %s", response.StatusCode(), response.StatusMessage())
-    }
-
-    mp, ok := response.GetDynMap("router_table")
-    if !ok {
-        return nil, fmt.Errorf("No router_table in response : %s", response)   
-    }
-
-    table,err := ToRouterTable(mp)
-    if err != nil {
-        return nil, err
-    }
-    return table, nil
 }
 
 //loads the stored version

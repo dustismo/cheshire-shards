@@ -28,6 +28,9 @@ type RouterTable struct {
     //Replication Factory
     ReplicationFactor int
 
+    //This is the param that we partition by
+    PartitionKey string
+
     //This is me
     MyEntry *RouterEntry
 
@@ -147,6 +150,11 @@ func ToRouterTable(mp *dynmap.DynMap) (*RouterTable, error) {
         return nil, fmt.Errorf("No replication_factor in the table %s", mp)
     }
 
+    t.PartitionKey, ok = mp.GetString("partition_key")
+    if !ok {
+        //do nothing, right?
+    }
+
     //fill the entries
     t.Entries = make([]*RouterEntry, 0)
     entryMaps, ok := mp.GetDynMapSlice("entries")
@@ -211,6 +219,8 @@ func (this *RouterTable) toDynMap() *dynmap.DynMap {
     mp.Put("revision", this.Revision)
     mp.Put("total_partitions", this.TotalPartitions)
     mp.Put("replication_factor", this.ReplicationFactor)
+    mp.Put("partition_key", this.PartitionKey)
+    
     entries := make([]*dynmap.DynMap, 0)
     for _,e := range(this.Entries) {
         entries = append(entries, e.ToDynMap())

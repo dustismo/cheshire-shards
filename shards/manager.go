@@ -299,9 +299,6 @@ func (this *Manager) tableClients(table *RouterTable, partition int) ([]cheshire
 
 //returns the current router table
 func (this *Manager) RouterTable() (*RouterTable, error) {
-    log.Println(this)
-    log.Println(this.lock)
-
     this.lock.RLock()
     defer this.lock.RUnlock()
     if this.table == nil {

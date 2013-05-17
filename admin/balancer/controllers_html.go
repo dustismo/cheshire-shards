@@ -1,7 +1,7 @@
 package balancer
 
 import (
-    "github.com/trendrr/cheshire-golang/cheshire"
+    "github.com/trendrr/goshire/cheshire"
     "log"
     "fmt"
 )

@@ -1,8 +1,8 @@
-package partition
+package shards
 
 import (
     // "time"
-    "github.com/trendrr/cheshire-golang/dynmap"
+    "github.com/trendrr/goshire/dynmap"
     "fmt"
     "time"
     // "log"
@@ -27,6 +27,9 @@ type RouterTable struct {
 
     //Replication Factory
     ReplicationFactor int
+
+    //This is the param that we partition by
+    PartitionKey string
 
     //This is me
     MyEntry *RouterEntry
@@ -147,6 +150,11 @@ func ToRouterTable(mp *dynmap.DynMap) (*RouterTable, error) {
         return nil, fmt.Errorf("No replication_factor in the table %s", mp)
     }
 
+    t.PartitionKey, ok = mp.GetString("partition_key")
+    if !ok {
+        //do nothing, right?
+    }
+
     //fill the entries
     t.Entries = make([]*RouterEntry, 0)
     entryMaps, ok := mp.GetDynMapSlice("entries")
@@ -211,6 +219,8 @@ func (this *RouterTable) toDynMap() *dynmap.DynMap {
     mp.Put("revision", this.Revision)
     mp.Put("total_partitions", this.TotalPartitions)
     mp.Put("replication_factor", this.ReplicationFactor)
+    mp.Put("partition_key", this.PartitionKey)
+    
     entries := make([]*dynmap.DynMap, 0)
     for _,e := range(this.Entries) {
         entries = append(entries, e.ToDynMap())
@@ -284,6 +294,9 @@ type RouterEntry struct {
     //Is this entry me?
     Self bool
     
+    //set for last ping time
+    LastSeenAt time.Time    
+
     //list of partitions this entry is responsible for (master only)
     Partitions []int
 
@@ -308,7 +321,7 @@ func ToRouterEntry(mp *dynmap.DynMap) (*RouterEntry, error) {
 
     e.JsonPort = mp.MustInt("ports.json", 0)
     e.HttpPort = mp.MustInt("ports.http", 0)
-
+    e.LastSeenAt = mp.MustTime("last_seen_at", *new(time.Time))
     e.Partitions, ok = mp.GetIntSlice("partitions")
     if !ok {
         e.Partitions = make([]int, 0)
@@ -351,6 +364,7 @@ func (this *RouterEntry) ToDynMap() *dynmap.DynMap {
     }
     mp.Put("id", this.Id())
     mp.Put("partitions", this.Partitions)
+    mp.Put("last_seen_at", this.LastSeenAt)
     this.DynMap = mp
     return mp
 }

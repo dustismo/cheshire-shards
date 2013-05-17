@@ -1,9 +1,10 @@
-package partition
+package shards
 
 import (
     // "time"
     "github.com/trendrr/goshire/dynmap"
     "github.com/trendrr/goshire/cheshire"
+    "github.com/trendrr/goshire/client"
     "fmt"
     "sync"
     "io/ioutil"
@@ -52,7 +53,7 @@ type Event struct {
 type Manager struct {
     table *RouterTable
     lock sync.RWMutex
-    connections map[string]cheshire.Client
+    connections map[string]client.Client
     ServiceName string
     DataDir string
     //my entry id.  TODO: need a good way to autodiscover this..
@@ -70,7 +71,7 @@ func NewManagerSeed(partitioner Partitioner, serviceName, dataDir, myEntryId str
     var err error
     for _,url := range(seedHttpUrls) {
 
-        client := cheshire.NewHttpClient(url)
+        client := client.NewHttp(url)
         tble, err := RequestRouterTable(client)
         client.Close()
         if err != nil {
@@ -93,7 +94,7 @@ func NewManagerSeed(partitioner Partitioner, serviceName, dataDir, myEntryId str
 func NewManager(partitioner Partitioner, serviceName, dataDir, myEntryId string) *Manager {
     manager := &Manager{
         table : nil,
-        connections : make(map[string]cheshire.Client),
+        connections : make(map[string]client.Client),
         DataDir : dataDir,
         ServiceName : serviceName,
         MyEntryId : myEntryId,
@@ -223,7 +224,7 @@ func (this *Manager) SetPartitioner(par Partitioner) {
 
 // Does a checkin with the requested client.  returns the 
 // router table revision of the connection.  
-func (this *Manager) Checkin(client cheshire.Client) (int64, error){
+func (this *Manager) Checkin(client client.Client) (int64, error){
     response, err := client.ApiCallSync(cheshire.NewRequest("/chs/checkin", "GET"), 10*time.Second)
     if err != nil {
         return int64(0), err
@@ -268,7 +269,7 @@ func (this *Manager) filename() string {
     return fmt.Sprintf("%s%s%s.routertable", this.DataDir, os.PathSeparator, this.ServiceName)
 }
 
-func (this *Manager) Clients(partition int) ([]cheshire.Client, error) {
+func (this *Manager) Clients(partition int) ([]client.Client, error) {
     this.lock.RLock()
     defer this.lock.RUnlock()
 
@@ -277,10 +278,10 @@ func (this *Manager) Clients(partition int) ([]cheshire.Client, error) {
 }
 
 //Returns the clients associated with this partition.
-func (this *Manager) tableClients(table *RouterTable, partition int) ([]cheshire.Client, error) {
+func (this *Manager) tableClients(table *RouterTable, partition int) ([]client.Client, error) {
     
 
-    clients := make([]cheshire.Client, 0)
+    clients := make([]client.Client, 0)
 
     entries, err := table.PartitionEntries(partition)
     if err != nil {
@@ -355,7 +356,7 @@ func (this *Manager) RouterTable() (*RouterTable, error) {
 //         //TODO: umm, wtf?
 //     }
 
-//     var client cheshire.Client
+//     var client client.Client
 //     //now choose a good client
 //     for _, c := range(clients) {
 //         //need to make sure this client is not me.
@@ -408,7 +409,7 @@ func (this *Manager) SetRouterTable(table *RouterTable) (*RouterTable, error){
     }
 
     //create a new map for connections
-    c := make(map[string]cheshire.Client)
+    c := make(map[string]client.Client)
     for _,e := range(table.Entries) {
         key := e.Id()
         if key == this.MyEntryId {
@@ -436,7 +437,7 @@ func (this *Manager) SetRouterTable(table *RouterTable) (*RouterTable, error){
     return oldTable, nil
 }
 
-func (this *Manager) createConnection(entry *RouterEntry) (cheshire.Client) {
-    c := cheshire.NewJsonClient(entry.Address, entry.JsonPort)
+func (this *Manager) createConnection(entry *RouterEntry) (client.Client) {
+    c := client.NewJson(entry.Address, entry.JsonPort)
     return c
 }

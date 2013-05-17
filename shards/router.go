@@ -1,8 +1,10 @@
-package router
+package shards
 
 import(
-    "github.com/trendrr/goshire/cheshire"
+    "sync"
+    "fmt"
     "github.com/trendrr/goshire/client"
+    "log"
 )
 
 // What the router needs to do:
@@ -22,7 +24,7 @@ type Matcher struct {
 
 //struct to match the entry with a specific client connection
 type EntryClient struct {
-    Entry *shards.RouterEntry
+    Entry *RouterEntry
     Client client.Client
 }
 
@@ -48,13 +50,13 @@ type Router struct {
 
 // Returns the entries associated to this partition.
 // the "master" will be at position [0]
-func (this *Router) Entries(int partition) ([]*EntryClient, error) {
+func (this *Router) Entries(partition int) ([]*EntryClient, error) {
     this.lock.RLock()
     defer this.lock.RUnlock()
     if partition > this.table.TotalPartitions || partition < 0 {
         return nil, fmt.Errorf("Partition %d is out of range", partition)
     }
-    return this.connections[partition]
+    return this.connections[partition], nil
 }
 
 // Creates a new EntryClient
@@ -89,7 +91,7 @@ func (this *Router) SetRouterTable(table *RouterTable) (*RouterTable, error) {
             entry = this.createEntryClient(e)
         } 
         delete(this.entries, key)
-        c[key] = conn
+        c[key] = entry
     }
 
 
@@ -114,20 +116,18 @@ func (this *Router) SetRouterTable(table *RouterTable) (*RouterTable, error) {
 
     //now close any Clients for removed entries
     for _, e := range(this.entries) {
-        e.client.Close()
+        e.Client.Close()
     }
     oldTable := this.table
     this.entries = c
     this.connections = connections
     this.table = table
-    this.save()
-
     return oldTable, nil
 }
 
 // A default client creation.  JSON with poolsize = 10
 func (this *Router) Create(entry *RouterEntry) (client.Client) {
-    c := cheshire.NewJsonClient(entry.Address, entry.JsonPort)
+    c := client.NewJson(entry.Address, entry.JsonPort)
     c.PoolSize = 5
     c.MaxInFlight = 250
     err := c.Connect()

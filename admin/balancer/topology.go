@@ -4,6 +4,7 @@ package balancer
 import (
     // "log"
     "github.com/trendrr/goshire/cheshire"
+    "github.com/trendrr/goshire/client"
     shards "github.com/dustismo/cheshire-shards/shards"
     "fmt"
     // "io/ioutil"
@@ -36,7 +37,7 @@ func locking(endpoint string, services *Services, routerTable *shards.RouterTabl
 
     // Lock All partitions
     for _, e := range(routerTable.Entries) {
-        response, err := cheshire.HttpApiCallSync(
+        response, err := client.HttpApiCallSync(
             fmt.Sprintf("%s:%d", e.Address, e.HttpPort),
             cheshire.NewRequest(endpoint, "GET"),
             5 * time.Second)
@@ -64,7 +65,7 @@ func DeletePartition(services *Services, entry *shards.RouterEntry, partition in
 
     services.Logger.Printf("NOW Deleting the partition from the origin server %s", entry.Address)
 
-    response, err := cheshire.HttpApiCallSync(
+    response, err := client.HttpApiCallSync(
             fmt.Sprintf("%s:%d", entry.Address, entry.HttpPort),
             request,
             300 * time.Second)
@@ -82,7 +83,7 @@ func DeletePartition(services *Services, entry *shards.RouterEntry, partition in
 // Checkin to an entry.  will update their router table if it is out of date.  will update our router table if out of date.
 func EntryCheckin(routerTable *shards.RouterTable, entry *shards.RouterEntry) (*shards.RouterTable, bool, error) {
         // make sure our routertable is up to date.
-        response, err := cheshire.HttpApiCallSync(
+        response, err := client.HttpApiCallSync(
             fmt.Sprintf("%s:%d", entry.Address, entry.HttpPort),
             cheshire.NewRequest(shards.CHECKIN, "GET"),
             5 * time.Second)
@@ -103,7 +104,7 @@ func EntryCheckin(routerTable *shards.RouterTable, entry *shards.RouterEntry) (*
             req := cheshire.NewRequest(shards.ROUTERTABLE_SET, "POST")
             req.Params().Put("router_table", req.ToDynMap())
 
-            response, err = cheshire.HttpApiCallSync(
+            response, err = client.HttpApiCallSync(
                 fmt.Sprintf("%s:%d", entry.Address, entry.HttpPort),
                 req,
                 5 * time.Second)
@@ -118,7 +119,7 @@ func EntryCheckin(routerTable *shards.RouterTable, entry *shards.RouterEntry) (*
 
             log.Printf("Found updated router table at: %s", entry.Address)
             //get the new routertable.
-            response, err = cheshire.HttpApiCallSync(
+            response, err = client.HttpApiCallSync(
                 fmt.Sprintf("%s:%d", entry.Address, entry.HttpPort),
                 cheshire.NewRequest(shards.ROUTERTABLE_GET, "GET"),
                 5 * time.Second)
@@ -177,14 +178,14 @@ func CopyData(services *Services, routerTable *shards.RouterTable, partition int
      moved := 0
 
     //create a new json connection
-    fromClient := cheshire.NewJsonClient(from.Address, from.JsonPort)
+    fromClient := client.NewJson(from.Address, from.JsonPort)
     err := fromClient.Connect()
     if err != nil {
         return moved, err
     }
     defer fromClient.Close()
     
-    toClient := cheshire.NewJsonClient(to.Address, to.JsonPort)
+    toClient := client.NewJson(to.Address, to.JsonPort)
     err = toClient.Connect()
     if err != nil {
         return moved, err

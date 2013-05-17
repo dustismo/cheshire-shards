@@ -1,10 +1,16 @@
 package shards
 
+import (
+    "fmt"
+    "github.com/trendrr/goshire/client"
+    "github.com/trendrr/goshire/cheshire"
+    "time"
+)
 
 // Finds the RouterTable from the given client
 //
 func RequestRouterTable(c client.Client) (*RouterTable, error) {
-    response, err := client.ApiCallSync(cheshire.NewRequest(ROUTERTABLE_GET, "GET"), 10*time.Second)
+    response, err := c.ApiCallSync(cheshire.NewRequest(ROUTERTABLE_GET, "GET"), 10*time.Second)
     if err != nil {
         return nil, err
     }

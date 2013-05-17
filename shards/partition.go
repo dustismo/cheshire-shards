@@ -1,4 +1,4 @@
-package partition
+package shards
 
 import (
     "github.com/trendrr/goshire/dynmap"

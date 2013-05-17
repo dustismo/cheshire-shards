@@ -2,7 +2,7 @@ package partition
 
 import (
     // "time"
-    "github.com/trendrr/cheshire-golang/dynmap"
+    "github.com/trendrr/goshire/dynmap"
     "fmt"
     "time"
     // "log"

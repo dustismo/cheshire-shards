@@ -2,8 +2,8 @@ package partition
 
 import (
     // "time"
-    "github.com/trendrr/cheshire-golang/dynmap"
-    "github.com/trendrr/cheshire-golang/cheshire"
+    "github.com/trendrr/goshire/dynmap"
+    "github.com/trendrr/goshire/cheshire"
     "fmt"
     "sync"
     "io/ioutil"

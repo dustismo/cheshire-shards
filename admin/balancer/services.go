@@ -1,10 +1,10 @@
 package balancer
 
 import (
-    "github.com/trendrr/cheshire-golang/dynmap"
-    // "github.com/trendrr/cheshire-golang/cheshire"
+    "github.com/trendrr/goshire/dynmap"
+    // "github.com/trendrr/goshire/cheshire"
     shards "github.com/dustismo/cheshire-shards/shards"
-    clog "github.com/trendrr/cheshire-golang/log"
+    clog "github.com/trendrr/goshire/log"
     "sort"
     "fmt"
     "io/ioutil"

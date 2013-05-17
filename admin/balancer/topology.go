@@ -3,7 +3,7 @@ package balancer
 
 import (
     // "log"
-    "github.com/trendrr/cheshire-golang/cheshire"
+    "github.com/trendrr/goshire/cheshire"
     shards "github.com/dustismo/cheshire-shards/shards"
     "fmt"
     // "io/ioutil"

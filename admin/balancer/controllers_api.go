@@ -1,8 +1,8 @@
 package balancer
 
 import (
-    "github.com/trendrr/cheshire-golang/cheshire"
-    clog "github.com/trendrr/cheshire-golang/log"
+    "github.com/trendrr/goshire/cheshire"
+    clog "github.com/trendrr/goshire/log"
     shards "github.com/dustismo/cheshire-shards/shards"
     "log"
     "fmt"

@@ -28,8 +28,9 @@ type RouterTable struct {
     //Replication Factory
     ReplicationFactor int
 
-    //This is the param that we partition by
-    PartitionKey string
+    //This is the params that we partition by
+    //multi key partitions will be accessed in order, separated by "|" then hashed.
+    PartitionKey []string
 
     //This is me
     MyEntry *RouterEntry

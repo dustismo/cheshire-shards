@@ -55,6 +55,23 @@ const (
     DATA_PUSH = "/__c/data/push"
 )
 
+//These are the required return error codes for various situations
+const (
+    // return when the requester has an old router table 
+    E_ROUTER_TABLE_OLD = 432
+    // the requested partition is locked.  requester should try back in a bit
+    E_PARTITION_LOCKED = 433
+)
+
+// Param NAmes
+const (
+    //The partition val (0 to rt.TotalPartitions)
+    P_PARTITION = "_p"
+
+    // The version of the router table
+    P_ROUTER_TABLE_V = "_rtv"
+)
+
 // Sets the partitioner and registers the necessary 
 // controllers
 func setupPartitionControllers(man *Manager) {

@@ -2,10 +2,10 @@ package main
 
 import (
     "log"
-    "github.com/trendrr/cheshire-golang/cheshire"
+    "github.com/trendrr/goshire/cheshire"
     shards "github.com/dustismo/cheshire-shards/shards"
     "github.com/dustismo/cheshire-shards/admin/balancer"
-    "github.com/trendrr/cheshire-golang/cheshire/impl/gocache"
+    "github.com/trendrr/goshire/cheshire/impl/gocache"
     "flag"
     // "time"
     // "fmt"

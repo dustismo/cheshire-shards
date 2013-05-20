@@ -7,25 +7,19 @@ import(
     "log"
 )
 
-// What the router needs to do:
-// Listen on ports
-// Shard on partition key
-// forward request to proper server.
-// Allow for overriding of processing for specific routes
-// Manage the router table
-
-
-// Handles matching the request to the 
-// appropriate service router
-type Matcher struct {
-
-
-}
 
 //struct to match the entry with a specific client connection
 type EntryClient struct {
     Entry *RouterEntry
     Client client.Client
+
+    //need locking to handle the dead client issue
+    lock sync.RWMutex
+    dead bool
+    lastLookup time.Time
+
+
+
 }
 
 //creates a client from a router entry
@@ -35,10 +29,8 @@ type ClientCreator interface {
     Create(entry *RouterEntry) client.Client
 }
 
-// The router
-// Handles matching the route
-// Handles forwarding the requests to the target
-type Router struct {
+// Manages the connections to the different shards
+type Connections struct {
     lock sync.RWMutex
     table *RouterTable
     //connections indexed by partition
@@ -50,7 +42,7 @@ type Router struct {
 
 // Returns the entries associated to this partition.
 // the "master" will be at position [0]
-func (this *Router) Entries(partition int) ([]*EntryClient, error) {
+func (this *Connections) Entries(partition int) ([]*EntryClient, error) {
     this.lock.RLock()
     defer this.lock.RUnlock()
     if partition > this.table.TotalPartitions || partition < 0 {
@@ -60,7 +52,7 @@ func (this *Router) Entries(partition int) ([]*EntryClient, error) {
 }
 
 // Creates a new EntryClient
-func (this *Router) createEntryClient(entry *RouterEntry) *EntryClient {
+func (this *Connections) createEntryClient(entry *RouterEntry) *EntryClient {
     client := this.clientCreator.Create(entry)
     return &EntryClient{
         Entry : entry,
@@ -73,7 +65,7 @@ func (this *Router) createEntryClient(entry *RouterEntry) *EntryClient {
 // will return an error on any problem, in which case the old router table
 // should remain intact.
 // Returns the old router table
-func (this *Router) SetRouterTable(table *RouterTable) (*RouterTable, error) {
+func (this *Connections) SetRouterTable(table *RouterTable) (*RouterTable, error) {
     this.lock.Lock()
     defer this.lock.Unlock()
     if this.table != nil {
@@ -126,7 +118,7 @@ func (this *Router) SetRouterTable(table *RouterTable) (*RouterTable, error) {
 }
 
 // A default client creation.  JSON with poolsize = 10
-func (this *Router) Create(entry *RouterEntry) (client.Client) {
+func (this *Connections) Create(entry *RouterEntry) (client.Client) {
     c := client.NewJson(entry.Address, entry.JsonPort)
     c.PoolSize = 5
     c.MaxInFlight = 250
@@ -141,7 +133,3 @@ func (this *Router) Create(entry *RouterEntry) (client.Client) {
     }
     return c
 }
-
-
-
-

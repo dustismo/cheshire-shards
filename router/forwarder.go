@@ -32,6 +32,22 @@ func NewMatcher *Matcher {
     return m
 }
 
+// Adds a new service to this router.
+// All endpoints matching /{serviceName}/ will be forwarded to that service.
+// at least 1 of the seedUrls must be in service 
+func (this *Matcher) AddService(seedUrls ...string) error {
+
+    connections, err := shards.ConnectionsFromSeed(seedUrls)
+    if err != nil {
+        return err
+    }
+    router := &Router{
+        connections: connections,
+    }
+    this.services[connections.RouterTable().Service] = router
+    return nil
+}
+
 // We return our special controller here.
 func (this *Matcher) Match(route string, method string) Controller {
     return this
@@ -77,6 +93,8 @@ func HandleRequest(txn *cheshire.Txn) {
 type Router struct {
     connections *shards.Connections   
 }
+
+
 
 // Do the request
 func (this *Router) doReq(txn *cheshire.Txn) {
@@ -154,7 +172,7 @@ type apiRR struct {
 }
 
 // Does the actual apiCall
-// The response is registered in the a.response
+// keeps track of all the responses in the responses map
 func (this *Router) apiCall(a *apiRR) {
 
     if a.count >= max {

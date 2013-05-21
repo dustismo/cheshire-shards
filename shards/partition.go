@@ -63,14 +63,26 @@ const (
     E_PARTITION_LOCKED = 433
 )
 
-// Param NAmes
+// Param Names
 const (
-    //The partition val (0 to rt.TotalPartitions)
+    //The partition val (an integer from 0 to TotalPartitions)
     P_PARTITION = "_p"
 
     // The version of the router table
     P_ROUTER_TABLE_V = "_rtv"
+
+    //The query type.  
+    // This defines how the request can be handled by the router.
+    // Possible values: 
+    // single : return a single result (the first response received)
+    // all : (default) return values for all servers, will make an effort to retry on failure, but will generally return error results.
+    // all_q : return values for all servers (queue requests if needed, retry until response).  This would typically be for posting
+    P_QUERY_TYPE = "_qt"
+
 )
+
+
+
 
 // Sets the partitioner and registers the necessary 
 // controllers

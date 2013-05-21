@@ -3,6 +3,11 @@ package router
 import (
     "github.com/trendrr/goshire/cheshire"
     "github.com/trendrr/goshire/client"
+ "github.com/trendrr/goshire-shards/shards"
+ "log"
+ "strings"
+ "fmt"       
+ "time"
 )
 
 
@@ -22,11 +27,12 @@ type Matcher struct {
     config *cheshire.ControllerConfig
     services map[string]*Router 
 }
-func NewMatcher *Matcher {
+
+func NewMatcher() *Matcher {
     //create the config
 
     m := &Matcher{
-        config : NewControllerConfig("/"),
+        config : cheshire.NewControllerConfig("/"),
         services : make(map[string]*Router),
     }
     return m
@@ -37,7 +43,7 @@ func NewMatcher *Matcher {
 // at least 1 of the seedUrls must be in service 
 func (this *Matcher) AddService(seedUrls ...string) error {
 
-    connections, err := shards.ConnectionsFromSeed(seedUrls)
+    connections, err := shards.ConnectionsFromSeed(seedUrls...)
     if err != nil {
         return err
     }
@@ -49,24 +55,24 @@ func (this *Matcher) AddService(seedUrls ...string) error {
 }
 
 // We return our special controller here.
-func (this *Matcher) Match(route string, method string) Controller {
+func (this *Matcher) Match(route string, method string) cheshire.Controller {
     return this
 }
 
 // Necessary to implement the RouteMatcher interface
-func (this *Matcher) Register([]string, Controller) {
+func (this *Matcher) Register([]string, cheshire.Controller) {
     //do nothing
     log.Println("Register called on Router Matcher. Invalid!")
 }
 
 // Necessary for the Controller interface
-func (this *Matcher) Config() *ControllerConfig {
+func (this *Matcher) Config() *cheshire.ControllerConfig {
     return this.config
 }
 
 // This is our special controller.
-func HandleRequest(txn *cheshire.Txn) {
-    tmp := strings.Split(txn.Request.Uri(), "/", 3)
+func (this *Matcher) HandleRequest(txn *cheshire.Txn) {
+    tmp := strings.SplitN(txn.Request.Uri(), "/", 3)
     if len(tmp) != 3 {
         //ack!
         cheshire.SendError(txn, 406, "Uri should be in the form /{service}/{uri}")
@@ -105,10 +111,11 @@ func (this *Router) doReq(txn *cheshire.Txn) {
 
     vals := make([]string, len(keyParams))
     for i, k := range(keyParams) {
-        vals[i], ok := txn.Request.Params().GetString(k)
+        v, ok := txn.Request.Params().GetString(k)
         if ok {
             partitionFound = true
         }
+        vals[i] = v
     }
 
     if !partitionFound {
@@ -116,11 +123,12 @@ func (this *Router) doReq(txn *cheshire.Txn) {
 
     }
 
-    partitionKey = strings.Join(vals, "|")
+    partitionKey := strings.Join(vals, "|")
 
+    log.Printf("partition key %s", partitionKey)
     //Now partition
     //TODO
-    partition = P.Partition(partitionKey)
+    partition := 0 //P.Partition(partitionKey)
 
     //Add the required params
     txn.Request.Params().Put(shards.P_PARTITION, partition)
@@ -140,7 +148,7 @@ func (this *Router) doReq(txn *cheshire.Txn) {
         queryType : queryType,
         responses : make(map[string]*cheshire.Response),
         txn : txn,
-        response : cheshire.NewResponse(a.txn),
+        response : cheshire.NewResponse(txn),
         count : 0,
         max : max,
     }
@@ -175,7 +183,7 @@ type apiRR struct {
 // keeps track of all the responses in the responses map
 func (this *Router) apiCall(a *apiRR) {
 
-    if a.count >= max {
+    if a.count >= a.max {
         log.Printf("Tried %d times, that is our limit!", a.max)
         //TODO: Send what we have
         return
@@ -183,10 +191,14 @@ func (this *Router) apiCall(a *apiRR) {
     a.count++
 
     //get the connections and send.
-    entries := this.connections.Entries(a.partition)
+    entries, err := this.connections.Entries(a.partition)
+    if err != nil {
+        //TODO, do something here.
+        log.Println(err)
+    }
 
     //make sure this txnId is unique to each connection. 
-    txn.Request.SetTxnId(fmt.Sprintf("%d", client.NewTxnId()))
+    a.txn.Request.SetTxnId(fmt.Sprintf("%d", client.NewTxnId()))
 
     //Fuck it, just do the calls serially, this makes life soo much
     //easier then trying to do them in parallel.  
@@ -203,18 +215,18 @@ func (this *Router) apiCall(a *apiRR) {
             continue
         }
 
-        resp, err := c.ApiCallSync(txn.Request)
+        resp, err := c.ApiCallSync(a.txn.Request, 15 * time.Second)
 
         if err != nil {
             continue
         }
 
         // check for locks, or other problems
-        if res.StatusCode() == shards.E_ROUTER_TABLE_OLD {
+        if resp.StatusCode() == shards.E_ROUTER_TABLE_OLD {
             // ouch bad routertable..
 
             //update router table, and try the request again.
-            rt, err := shards.RequestRouterTable(entry.Client())
+            rt, err := shards.RequestRouterTable(c)
             if err != nil {
                 this.connections.SetRouterTable(rt)
                 break
@@ -222,13 +234,13 @@ func (this *Router) apiCall(a *apiRR) {
         }
 
         // partition is locked!
-        if res.StatusCode() == shards.E_PARTITION_LOCKED {
+        if resp.StatusCode() == shards.E_PARTITION_LOCKED {
             // sleep 5 seconds and try again.
             time.Sleep(5 * time.Second)
             break
         }
 
-        a.responses[entry.Entry.Id()] = res
+        a.responses[entry.Entry.Id()] = resp
         if a.queryType == "single" {
             // we got one!
             return
@@ -245,7 +257,7 @@ func (this *Router) apiCall(a *apiRR) {
     // give it a rest, then try again
     time.Sleep(1 * time.Second) 
     //Tail Recursion YAY!
-    this.apiCall(api)
+    this.apiCall(a)
     return
 }
 

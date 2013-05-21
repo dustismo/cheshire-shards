@@ -47,7 +47,7 @@ func (this *EntryClient) Client() (client.Client, error) {
         return this.client, fmt.Errorf("No client available, will try to connect again in a few seconds")
     }
     //now attempt to connect.
-    c, err := this.clientCreator.Create()
+    c, err := this.clientCreator.Create(this.Entry)
     this.client = c
     this.lastLookup = time.Now()
     if err == nil {
@@ -75,13 +75,13 @@ type Connections struct {
     entries map[string]*EntryClient
 }
 // Loads the router table from one or more of the urls 
-func ConnectionsFromSeed(urls ...string) *Connections, error {
+func ConnectionsFromSeed(urls ...string) (*Connections, error) {
     connections := &Connections{
 
     }
 
-    rt *RouterTable
-    err error
+    var rt *RouterTable
+    var err error
     for _, url := range(urls) {
         c := client.NewHttp(url)
         rt, err = RequestRouterTable(c)
@@ -92,8 +92,8 @@ func ConnectionsFromSeed(urls ...string) *Connections, error {
     if rt == nil {
         return nil, fmt.Errorf("Unable to get a router table from urls %s ERROR(%s)", urls, err)
     }
-    connections.SetRouterTable(rt)
-
+    _, err = connections.SetRouterTable(rt)
+    return connections, err
 }
 
 func (this *Connections) RouterTable() *RouterTable {
@@ -168,7 +168,12 @@ func (this *Connections) SetRouterTable(table *RouterTable) (*RouterTable, error
 
     //now close any Clients for removed entries
     for _, e := range(this.entries) {
-        e.Client.Close()
+        c, err := e.Client()
+        if err != nil {
+            log.Println(err)    
+        } else {
+            c.Close()            
+        }
     }
     oldTable := this.table
     this.entries = c

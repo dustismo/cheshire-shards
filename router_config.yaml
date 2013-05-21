@@ -1,0 +1,13 @@
+# Router config file 
+
+http: 
+   port: 8015
+json:
+   port: 8014
+
+services:
+   test:
+      seeds:
+         -localhost:8010
+
+         

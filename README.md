@@ -1,10 +1,8 @@
 goshire-shards
 ==============
 
-handle balancing for partitioned [https://github.com/trendrr/goshire|goshire] services 
 
-
-The goal of this project is to make balanced horizontally scalable services simple to to write. 
+The goal of this project is to make balanced horizontally scalable Goshire (https://github.com/trendrr/goshire) services simple to to write. 
 
 It consists of three pieces:
 
@@ -17,6 +15,8 @@ It consists of three pieces:
 ### Router
    This process handles routing requests to the appropriate node(s) in the cluster.  In a typical deployment you would run a router on every server that connects to the cluster.  (i.e. your apps always connect to localhost).
 
+
+====================
 
 Note this is in active development and not at all ready for prime time.
 

@@ -209,5 +209,5 @@ func DataPull(txn *cheshire.Txn) {
             }
         }
     }()
-    manager.partitioner.Data(part, dataChan, finishedChan, errorChan)
+    manager.service.Data(part, dataChan, finishedChan, errorChan)
 }

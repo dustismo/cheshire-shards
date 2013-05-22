@@ -13,7 +13,7 @@ import (
     "time"
 )
 
-type Partitioner interface {
+type Service interface {
     
     //Gets all the data for a specific partition
     //should send total # of items on the finished chanel when complete
@@ -23,29 +23,30 @@ type Partitioner interface {
     SetData(partition int, data *dynmap.DynMap)
 
     //Deletes the requested partition
-    DeleteData(partition int)
+    DeletePartition(partition int) error
 }
 
-type DummyPartitioner struct {
+type DummyService struct {
 
 }
 
-func (this *DummyPartitioner) Data(partition int, deleteData bool, dataChan chan *dynmap.DynMap, finished chan int, errorChan chan error) {
-    log.Printf("Requesting Data from dummy partitioner, ignoring.. (partition: %d),(deleteData: %s)", partition, deleteData)
+func (this *DummyService) Data(partition int, deleteData bool, dataChan chan *dynmap.DynMap, finished chan int, errorChan chan error) {
+    log.Printf("Requesting Data from dummy service, ignoring.. (partition: %d),(deleteData: %s)", partition, deleteData)
 }
 
-func (this *DummyPartitioner) SetData(partition int, data *dynmap.DynMap) {
-    log.Printf("Requesting SetData from dummy partitioner, ignoring.. (partition: %d),(data: %s)", partition, data)
+func (this *DummyService) SetData(partition int, data *dynmap.DynMap) {
+    log.Printf("Requesting SetData from dummy service, ignoring.. (partition: %d),(data: %s)", partition, data)
 }
 
+func (this *DummyService) DeletePartition(partition int) {
+    log.Printf("Requesting DeletePartiton from dummy service, ignoring.. (partition: %d)", partition)
+}
 
 type EventType string
 
 
 type Event struct {
     EventType string
-
-
 }
 
 
@@ -58,16 +59,16 @@ type Manager struct {
     DataDir string
     //my entry id.  TODO: need a good way to autodiscover this..
     MyEntryId string
-    partitioner Partitioner
+    service Service
     lockedPartitions map[int]bool
 }
 
 // Creates a new manager.  Uses the one or more seed urls to download the 
 // routing table.
-func NewManagerSeed(partitioner Partitioner, serviceName, dataDir, myEntryId string, seedHttpUrls []string) (*Manager, error) {
+func NewManagerSeed(service Service, serviceName, dataDir, myEntryId string, seedHttpUrls []string) (*Manager, error) {
     //TODO: can we get the servicename from the routing table?
 
-    manager := NewManager(partitioner, serviceName, dataDir, myEntryId)
+    manager := NewManager(service, serviceName, dataDir, myEntryId)
     var err error
     for _,url := range(seedHttpUrls) {
 
@@ -91,7 +92,7 @@ func NewManagerSeed(partitioner Partitioner, serviceName, dataDir, myEntryId str
 
 //Creates a new manager.  will load the routing table from disk if
 //it exists
-func NewManager(partitioner Partitioner, serviceName, dataDir, myEntryId string) *Manager {
+func NewManager(service Service, serviceName, dataDir, myEntryId string) *Manager {
     manager := &Manager{
         table : nil,
         connections : make(map[string]client.Client),
@@ -216,10 +217,10 @@ func (this *Manager) MyResponsibility(partition int) (bool, bool) {
     return isMine, locked
 }
 
-//Sets the partitioner for this manager
+//Sets the service for this manager
 //this should only be called once at initialization.  it is not threadsafe
-func (this *Manager) SetPartitioner(par Partitioner) {
-    this.partitioner = par
+func (this *Manager) SetService(par Service) {
+    this.service = par
 }
 
 // Does a checkin with the requested client.  returns the 
@@ -382,7 +383,7 @@ func (this *Manager) RouterTable() (*RouterTable, error) {
 //                 mp := response.ToDynMap()
 //                 data, ok := mp.GetDynMap("data")
 //                 if ok {
-//                     this.partitioner.SetData(partition, data)
+//                     this.service.SetData(partition, data)
 //                 }
 //                 if response.TxnStatus() == "complete" {
 //                     //yay!

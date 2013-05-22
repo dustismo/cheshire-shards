@@ -73,13 +73,19 @@ type Connections struct {
     clientCreator ClientCreator
     //entries organized by entry id
     entries map[string]*EntryClient
+    //a channel you can listen for 
+    // router table changes
+    // this will send the OLD router table
+    RouterTableChange chan *RouterTable
 }
 // Loads the router table from one or more of the urls 
 func ConnectionsFromSeed(urls ...string) (*Connections, error) {
-    connections := &Connections{
+    connections := &Connections{}
+    err := connections.InitFromSeed(urls...)
+    return connections, err
+}
 
-    }
-
+func (this *Connections) InitFromSeed(urls ...string) error {
     var rt *RouterTable
     var err error
     for _, url := range(urls) {
@@ -90,15 +96,24 @@ func ConnectionsFromSeed(urls ...string) (*Connections, error) {
         }
     }
     if rt == nil {
-        return nil, fmt.Errorf("Unable to get a router table from urls %s ERROR(%s)", urls, err)
+        return fmt.Errorf("Unable to get a router table from urls %s ERROR(%s)", urls, err)
     }
-    _, err = connections.SetRouterTable(rt)
-    return connections, err
+    _, err = this.SetRouterTable(rt)
+    return err
 }
 
 func (this *Connections) RouterTable() *RouterTable {
     return this.table
 }
+
+// finds an entry based on the entry Id
+func (this *Connections) EntryById(id string) (*EntryClient, bool) {
+    this.lock.RLock()
+    defer this.lock.RUnlock()
+    v, ok := this.entries[id]
+    return v, ok
+}
+
 // Returns the entries associated to this partition.
 // the "master" will be at position [0]
 func (this *Connections) Entries(partition int) ([]*EntryClient, error) {
@@ -179,6 +194,13 @@ func (this *Connections) SetRouterTable(table *RouterTable) (*RouterTable, error
     this.entries = c
     this.connections = connections
     this.table = table
+
+    //non-blocking channel send.
+    select {
+    case this.RouterTableChange <- oldTable :
+    default :
+    }
+
     return oldTable, nil
 }
 

@@ -13,7 +13,7 @@ var manager *Manager
 
 // Sets the partitioner and registers the necessary 
 // controllers
-func setupPartitionControllers(man *Manager) {
+func RegisterServiceControllers(man *Manager) {
     manager = man
 
     //register the controllers.

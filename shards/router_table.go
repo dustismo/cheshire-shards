@@ -32,9 +32,6 @@ type RouterTable struct {
     //multi key partitions will be accessed in order, separated by "|" then hashed.
     PartitionKeys []string
 
-    //This is me
-    MyEntry *RouterEntry
-
     //entries organized by partition
     //index in the array is the partition
     EntriesPartition [][]*RouterEntry

@@ -26,6 +26,7 @@ func RegisterServiceControllers(man *Manager) {
 
 func Checkin(txn *cheshire.Txn) {
 	table, err := manager.RouterTable()
+
 	revision := int64(0)
 	if err == nil {
 		revision = table.Revision

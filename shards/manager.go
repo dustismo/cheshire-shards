@@ -31,16 +31,17 @@ type Service interface {
 type DummyService struct {
 }
 
-func (this *DummyService) Data(partition int, deleteData bool, dataChan chan *dynmap.DynMap, finished chan int, errorChan chan error) {
-	log.Printf("Requesting Data from dummy service, ignoring.. (partition: %d),(deleteData: %s)", partition, deleteData)
+func (this *DummyService) Data(partition int, dataChan chan *dynmap.DynMap, finished chan int, errorChan chan error) {
+	log.Printf("Requesting Data from dummy service, ignoring.. (partition: %d)", partition)
 }
 
 func (this *DummyService) SetData(partition int, data *dynmap.DynMap) {
 	log.Printf("Requesting SetData from dummy service, ignoring.. (partition: %d),(data: %s)", partition, data)
 }
 
-func (this *DummyService) DeletePartition(partition int) {
+func (this *DummyService) DeletePartition(partition int) error {
 	log.Printf("Requesting DeletePartiton from dummy service, ignoring.. (partition: %d)", partition)
+    return nil
 }
 
 type EventType string
@@ -224,8 +225,12 @@ func (this *Manager) RouterTable() (*RouterTable, error) {
 	if this.connections == nil {
 		return nil, fmt.Errorf("No Router Table available")
 	}
+    rt := this.connections.RouterTable()
+    if rt == nil {
+        return rt, fmt.Errorf("No RouterTable available")
+    }
 
-	return this.connections.RouterTable(), nil
+	return rt, nil
 }
 
 // Sets a new router table, returns the old one 

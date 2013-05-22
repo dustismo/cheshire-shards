@@ -28,8 +28,9 @@ type RouterTable struct {
     //Replication Factory
     ReplicationFactor int
 
-    //This is the param that we partition by
-    PartitionKey string
+    //This is the params that we partition by
+    //multi key partitions will be accessed in order, separated by "|" then hashed.
+    PartitionKeys []string
 
     //This is me
     MyEntry *RouterEntry
@@ -150,7 +151,7 @@ func ToRouterTable(mp *dynmap.DynMap) (*RouterTable, error) {
         return nil, fmt.Errorf("No replication_factor in the table %s", mp)
     }
 
-    t.PartitionKey, ok = mp.GetString("partition_key")
+    t.PartitionKeys, ok = mp.GetStringSlice("partition_keys")
     if !ok {
         //do nothing, right?
     }
@@ -219,7 +220,7 @@ func (this *RouterTable) toDynMap() *dynmap.DynMap {
     mp.Put("revision", this.Revision)
     mp.Put("total_partitions", this.TotalPartitions)
     mp.Put("replication_factor", this.ReplicationFactor)
-    mp.Put("partition_key", this.PartitionKey)
+    mp.Put("partition_keys", this.PartitionKeys)
     
     entries := make([]*dynmap.DynMap, 0)
     for _,e := range(this.Entries) {

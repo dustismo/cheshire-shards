@@ -55,6 +55,35 @@ const (
     DATA_PUSH = "/__c/data/push"
 )
 
+//These are the required return error codes for various situations
+const (
+    // return when the requester has an old router table 
+    E_ROUTER_TABLE_OLD = 432
+    // the requested partition is locked.  requester should try back in a bit
+    E_PARTITION_LOCKED = 433
+)
+
+// Param Names
+const (
+    //The partition val (an integer from 0 to TotalPartitions)
+    P_PARTITION = "_p"
+
+    // The version of the router table
+    P_ROUTER_TABLE_V = "_rtv"
+
+    //The query type.  
+    // This defines how the request can be handled by the router.
+    // Possible values: 
+    // single : return a single result (the first response received)
+    // all : (default) return values for all servers, will make an effort to retry on failure, but will generally return error results.
+    // all_q : return values for all servers (queue requests if needed, retry until response).  This would typically be for posting
+    P_QUERY_TYPE = "_qt"
+
+)
+
+
+
+
 // Sets the partitioner and registers the necessary 
 // controllers
 func setupPartitionControllers(man *Manager) {

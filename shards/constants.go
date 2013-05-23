@@ -49,8 +49,15 @@ const (
 const (
 	// return when the requester has an old router table 
 	E_ROUTER_TABLE_OLD = 432
+
+	// requester has a newer router table then us, request they update ours
+	E_SEND_ROUTER_TABLE = 433
+
 	// the requested partition is locked.  requester should try back in a bit
-	E_PARTITION_LOCKED = 433
+	E_PARTITION_LOCKED = 434
+
+	// The requested partition does not live on this shard
+	E_NOT_MY_PARTITION = 435
 )
 
 // Param Names
@@ -59,7 +66,7 @@ const (
 	P_PARTITION = "_p"
 
 	// The version of the router table
-	P_ROUTER_TABLE_V = "_rtv"
+	P_REVISION = "_v"
 
 	//The query type.  
 	// This defines how the request can be handled by the router.

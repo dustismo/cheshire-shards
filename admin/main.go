@@ -3,8 +3,8 @@ package main
 import (
     "log"
     "github.com/trendrr/goshire/cheshire"
-    shards "github.com/dustismo/cheshire-shards/shards"
-    "github.com/dustismo/cheshire-shards/admin/balancer"
+    "github.com/trendrr/goshire-shards/shards"
+    "github.com/trendrr/goshire-shards/admin/balancer"
     "github.com/trendrr/goshire/cheshire/impl/gocache"
     "flag"
     // "time"

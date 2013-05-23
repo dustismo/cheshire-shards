@@ -1,5 +1,5 @@
 http:
-   port: 8010
+   port: 8000
    # Static files for serving js/css/ect for http only
    static_files:
       route: /static/
@@ -10,4 +10,4 @@ http:
    html:
       view_directory: views
 json:
-   port: 8009
+   port: 8001

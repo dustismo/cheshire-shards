@@ -3,7 +3,7 @@ package balancer
 import (
     "github.com/trendrr/goshire/cheshire"
     clog "github.com/trendrr/goshire/log"
-    shards "github.com/dustismo/cheshire-shards/shards"
+    "github.com/trendrr/goshire-shards/shards"
     "log"
     "fmt"
 )

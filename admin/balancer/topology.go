@@ -5,7 +5,7 @@ import (
     // "log"
     "github.com/trendrr/goshire/cheshire"
     "github.com/trendrr/goshire/client"
-    shards "github.com/dustismo/cheshire-shards/shards"
+    "github.com/trendrr/goshire-shards/shards"
     "fmt"
     // "io/ioutil"
     "time"

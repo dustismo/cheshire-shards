@@ -209,7 +209,7 @@
   $(document).ready(function() {
     console.log($("#log-template").html())
     strest = new Strest( {
-        url : "ws://localhost:8010/ws",
+        url : "ws://localhost:8000/ws",
         onopen : function(event) {
                 log.message("sysmsg", "CONNECTED!")
                 //register for the log messages

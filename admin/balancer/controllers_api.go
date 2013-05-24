@@ -52,7 +52,7 @@ func ServiceCheckins(txn *cheshire.Txn) {
 
         routerTable, _ = Servs.RouterTable(routerTable.Service)
         res.Put("router_table", routerTable.ToDynMap())
-        _, err = txn.Write(res)
+        _, err := txn.Write(res)
         if err != nil {
             //try and write an error response
             cheshire.SendError(txn, 510, fmt.Sprintf("%s",err))

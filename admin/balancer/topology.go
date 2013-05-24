@@ -80,7 +80,24 @@ func DeletePartition(services *Services, entry *shards.RouterEntry, partition in
     return nil
 }
 
+// tests that this entry is contactable, and is a proper service
+func EntryContact(entry *shards.RouterEntry) error {
+    response, err := client.HttpApiCallSync(
+            fmt.Sprintf("%s:%d", entry.Address, entry.HttpPort),
+            cheshire.NewRequest(shards.CHECKIN, "GET"),
+            5 * time.Second)
+    if err != nil {
+        return fmt.Errorf("ERROR While contacting %s -- %s", entry.Address, err)
+    }
+    _, ok := response.GetInt64("rt_revision")
+    if !ok {
+        return fmt.Errorf("ERROR No rt_revision in response from %s -- Status(%s)", entry.Address, response.StatusMessage())
+    }
+    return nil
+}
+
 // Checkin to an entry.  will update their router table if it is out of date.  will update our router table if out of date.
+// returns the updated router table, updated, error
 func EntryCheckin(routerTable *shards.RouterTable, entry *shards.RouterEntry) (*shards.RouterTable, bool, error) {
         // make sure our routertable is up to date.
         response, err := client.HttpApiCallSync(
@@ -91,8 +108,6 @@ func EntryCheckin(routerTable *shards.RouterTable, entry *shards.RouterEntry) (*
             return routerTable, false, fmt.Errorf("ERROR While contacting %s -- %s", entry.Address, err)
         }
 
-        entry.LastSeenAt = time.Now()
-        
         rev := response.MustInt64("rt_revision", 0)
         if rev == routerTable.Revision {
             return routerTable, false, nil
@@ -101,8 +116,10 @@ func EntryCheckin(routerTable *shards.RouterTable, entry *shards.RouterEntry) (*
         if rev < routerTable.Revision {
             //updating server.
             //set the new routertable.
+
+            Servs.Logger.Printf("UPDATING router table on %s", entry.Id())
             req := cheshire.NewRequest(shards.ROUTERTABLE_SET, "POST")
-            req.Params().Put("router_table", req.ToDynMap())
+            req.Params().Put("router_table", routerTable.ToDynMap())
 
             response, err = client.HttpApiCallSync(
                 fmt.Sprintf("%s:%d", entry.Address, entry.HttpPort),
@@ -141,6 +158,8 @@ func EntryCheckin(routerTable *shards.RouterTable, entry *shards.RouterEntry) (*
             return routerTable, true, nil
 
         } 
+
+
         return routerTable, false, nil
 } 
 

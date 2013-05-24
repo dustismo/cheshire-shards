@@ -37,10 +37,12 @@ func NewService(txn *cheshire.Txn) {
     err := Servs.NewRouterTable(name, 512, replication)
     if err != nil {
         cheshire.Flash(txn, "error", fmt.Sprintf("%s",err))
+        cheshire.Redirect(txn, "/index")
     } else {
         cheshire.Flash(txn, "success", "successfully created router table")    
+        cheshire.Redirect(txn, fmt.Sprintf("/service?name=%s", name))
     }
-    cheshire.Redirect(txn, "/index")
+   
 }
 
 func Service(txn *cheshire.Txn) {

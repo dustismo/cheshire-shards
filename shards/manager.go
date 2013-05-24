@@ -92,7 +92,10 @@ func NewManager(service Service, serviceName, dataDir, myEntryId string) *Manage
 	go func() {
 		for {
 			<-rtchange
-			manager.save()
+			err := manager.save()
+			if err != nil {
+				log.Printf("ERROR Trying to save router table : %s", err)
+			}
 		}
 	}()
 	return manager
@@ -207,7 +210,7 @@ func (this *Manager) filename() string {
 	if this.DataDir == "" {
 		return fmt.Sprintf("%s.routertable", this.ServiceName)
 	}
-	return fmt.Sprintf("%s%s%s.routertable", this.DataDir, os.PathSeparator, this.ServiceName)
+	return fmt.Sprintf("%s%c%s.routertable", this.DataDir, os.PathSeparator, this.ServiceName)
 }
 
 func (this *Manager) Clients(partition int) ([]*EntryClient, error) {
@@ -235,6 +238,9 @@ func (this *Manager) RouterTable() (*RouterTable, error) {
 
 // Sets a new router table, returns the old one 
 func (this *Manager) SetRouterTable(rt *RouterTable) (*RouterTable, error) {
+	if rt.Service != this.ServiceName {
+		return nil, fmt.Errorf("Error cannot set router table for service %s, should be service %s", rt.Service, this.ServiceName)
+	}
 	old, err := this.connections.SetRouterTable(rt)
 	return old, err
 }

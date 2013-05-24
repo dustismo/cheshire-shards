@@ -88,7 +88,10 @@ func (this *Services) NewRouterTable(service string, totalshards int, repFactor 
 
 func (this *Services) SetRouterTable(table *shards.RouterTable) {
     this.services[table.Service] = table
-    this.Save()
+    err := this.Save()
+    if err != nil {
+        log.Printf("Error saving %s", err)
+    }
 }
 
 func (this *Services) RouterTable(service string) (*shards.RouterTable, bool) {

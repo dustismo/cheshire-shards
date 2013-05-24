@@ -3,7 +3,7 @@ package main
 import (
     "log"
     "github.com/trendrr/goshire/cheshire"
-    "github.com/trendrr/goshire-shards/shards"
+    // "github.com/trendrr/goshire-shards/shards"
     "github.com/trendrr/goshire-shards/admin/balancer"
     "github.com/trendrr/goshire/cheshire/impl/gocache"
     "flag"
@@ -31,19 +31,19 @@ func main() {
     balancer.Servs.DataDir = *dataDir
     balancer.Servs.Load()
 
-    testrt := shards.NewRouterTable("Test")
-    balancer.Servs.SetRouterTable(testrt)
+    // testrt := shards.NewRouterTable("Test")
+    // balancer.Servs.SetRouterTable(testrt)
 
-    //try creating entry
-    entry := &shards.RouterEntry{
-        Address : "localhost",
-        JsonPort : 8009,
-        HttpPort : 8010,
-        Partitions : make([]int, 0),
-    }
+    // //try creating entry
+    // entry := &shards.RouterEntry{
+    //     Address : "localhost",
+    //     JsonPort : 8009,
+    //     HttpPort : 8010,
+    //     Partitions : make([]int, 0),
+    // }
 
-    log.Println("********************* ADD ENTRY")
-    testrt.AddEntries(entry)
+    // log.Println("********************* ADD ENTRY")
+    // testrt.AddEntries(entry)
 
     //
     log.Println("Starting")

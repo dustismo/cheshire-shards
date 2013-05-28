@@ -41,11 +41,13 @@ func (this *EntryClient) Client() (client.Client, error) {
 	}
 
 	//check that lastlook isnt within 5 seconds.
-	t := time.Now().Sub(this.lastLookup) * time.Second
+	t := time.Now().Unix() - this.lastLookup.Unix()
 	if t < 5 {
 		return this.client, fmt.Errorf("No client available, will try to connect again in a few seconds")
 	}
 	//now attempt to connect.
+
+
 	c, err := this.clientCreator.Create(this.Entry)
 	this.client = c
 	this.lastLookup = time.Now()
@@ -80,6 +82,7 @@ type Connections struct {
 // Loads the router table from one or more of the urls 
 func ConnectionsFromSeed(urls ...string) (*Connections, error) {
 	connections := &Connections{}
+	connections.clientCreator = connections
 	err := connections.InitFromSeed(urls...)
 	return connections, err
 }
@@ -158,6 +161,7 @@ func (this *Connections) SetRouterTable(table *RouterTable) (*RouterTable, error
 		key := e.Id()
 		entry, ok := this.entries[key]
 		if !ok {
+			log.Printf("Creating entry %s", e)
 			entry = this.createEntryClient(e)
 		}
 		delete(this.entries, key)
@@ -202,7 +206,6 @@ func (this *Connections) SetRouterTable(table *RouterTable) (*RouterTable, error
 	case this.RouterTableChange <- oldTable:
 	default:
 	}
-
 	return oldTable, nil
 }
 

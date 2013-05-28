@@ -47,7 +47,7 @@ func PartitionParam(txn *cheshire.Txn) (int, bool) {
     }
 
     //check the partition is my responsibility
-    ok, locked := manager.MyResponsibility(partition)
+    ok, locked := SM().MyResponsibility(partition)
     if locked {
         cheshire.SendError(txn, E_PARTITION_LOCKED, fmt.Sprintf("partition is locked"))
         return 0, false   
@@ -72,7 +72,7 @@ func RouterRevisionParam(txn *cheshire.Txn) (bool, bool) {
         return false, true
     }
 
-    rt, err := manager.RouterTable()
+    rt, err := SM().RouterTable()
     if err != nil {
         log.Println(err)
         // Uhh, I think we say this is ok

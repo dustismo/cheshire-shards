@@ -8,12 +8,19 @@ import (
 	"time"
 )
 
-var manager *Manager
+//the global shard manager
+var sm *Manager
+
+// This is the global shard manager.
+// it is set up when you call shards.RegisterServiceControllers
+func SM() *Manager {
+	return sm
+}
 
 // Sets the partitioner and registers the necessary 
 // controllers
 func RegisterServiceControllers(man *Manager) {
-	manager = man
+	sm = man
 
 	//register the controllers.
 	cheshire.RegisterApi(ROUTERTABLE_GET, "GET", GetRouterTable)
@@ -25,7 +32,7 @@ func RegisterServiceControllers(man *Manager) {
 }
 
 func Checkin(txn *cheshire.Txn) {
-	table, err := manager.RouterTable()
+	table, err := SM().RouterTable()
 
 	revision := int64(0)
 	if err == nil {
@@ -39,7 +46,7 @@ func Checkin(txn *cheshire.Txn) {
 
 func GetRouterTable(txn *cheshire.Txn) {
 	log.Println("GetRouterTable")
-	tble, err := manager.RouterTable()
+	tble, err := SM().RouterTable()
 	if err != nil {
 		cheshire.SendError(txn, 506, fmt.Sprintf("Error: %s", err))
 		return
@@ -62,7 +69,7 @@ func SetRouterTable(txn *cheshire.Txn) {
 		return
 	}
 
-	_, err = manager.SetRouterTable(rt)
+	_, err = SM().SetRouterTable(rt)
 	if err != nil {
 		cheshire.SendError(txn, 406, fmt.Sprintf("Unable to set router table (%s)", err))
 		return
@@ -79,7 +86,7 @@ func Lock(txn *cheshire.Txn) {
 		return
 	}
 
-	err := manager.LockPartition(partition)
+	err := SM().LockPartition(partition)
 	if err != nil {
 		//now send back an error
 		cheshire.SendError(txn, 406, fmt.Sprintf("Unable to lock partitions (%s)", err))
@@ -96,7 +103,7 @@ func Unlock(txn *cheshire.Txn) {
 		return
 	}
 
-	err := manager.UnlockPartition(partition)
+	err := SM().UnlockPartition(partition)
 	if err != nil {
 		//now send back an error
 		cheshire.SendError(txn, 406, fmt.Sprintf("Unable to lock partitions (%s)", err))
@@ -135,5 +142,5 @@ func DataPull(txn *cheshire.Txn) {
 			}
 		}
 	}()
-	manager.service.Data(part, dataChan, finishedChan, errorChan)
+	SM().service.Data(part, dataChan, finishedChan, errorChan)
 }

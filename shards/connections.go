@@ -148,6 +148,10 @@ func (this *Connections) SetRouterTable(table *RouterTable) (*RouterTable, error
 		}
 	}
 
+	if this.entries == nil {
+		this.entries = make(map[string]*EntryClient)
+	}
+
 	//create a new map for connections
 	c := make(map[string]*EntryClient)
 	for _, e := range table.Entries {

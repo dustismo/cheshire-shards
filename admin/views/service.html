@@ -4,6 +4,7 @@
     <!-- The service fields -->
     <div id="service"></div>
     <button class="btn btn-primary" href="#newService" data-toggle="modal">New Entry</button>
+    <button class="btn" href="#newService" data-toggle="modal" onclick="syncChanges();">Propagate Changes</button>
   </div>
   <div class="span8">
     <!-- the log -->
@@ -81,6 +82,15 @@
                 {{replication_factor}}
               </td>
           </tr>
+          <tr>         
+              <td>Partition Keys</td>
+              <td>
+                {{#partition_keys}}
+                  {{.}}<br />
+
+                {{/partition_keys}}
+              </td>
+          </tr>
       </tbody>
   </table>
 </script>
@@ -104,17 +114,6 @@
               <p class="help-block">This should be Address of the new Shard.</p>
           </div>
       </div>
-      <div class="control-group">
-          <label class="control-label">Total Partitions</label>
-          <div class="controls">
-              <input id="total-partitions" name="total_partitions" type="number"
-              class="input-xlarge" value="512">
-              <p class="help-block">The total number of partitions for this service.  This value only
-                has an effect on the first entry.  This cannot be changed. choose wisely
-              </p>
-          </div>
-      </div>
-
       <div class="control-group">
           <label class="control-label">Http Port</label>
           <div class="controls">
@@ -209,7 +208,7 @@
   $(document).ready(function() {
     console.log($("#log-template").html())
     strest = new Strest( {
-        url : "ws://localhost:8010/ws",
+        url : "ws://localhost:8000/ws",
         onopen : function(event) {
                 log.message("sysmsg", "CONNECTED!")
                 //register for the log messages
@@ -222,6 +221,8 @@
                 );
 
                 RT.fetch();
+                registerChanges();
+
               },
         onclose : function(event) {
                 log.message("sysmsg", "DISCONNECTED!")
@@ -231,6 +232,19 @@
 
     strest.connect()
   });
+
+  registerChanges = function() {
+    
+    strest.sendRequest({
+      uri : "/api/service/sub/checkins",
+      method : "GET",
+      params : {service : "{{service}}"}
+    }, 
+    RTResponse,
+    function(err) {
+      log.message("error", err)
+    })
+  }
 
   newEntry = function(form) {
     var params = Strest.formToObject($('#new-entry-form'));

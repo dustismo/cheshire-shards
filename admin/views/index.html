@@ -22,7 +22,7 @@
           <td>{{TotalPartitions}}</td>
           <td>{{ReplicationFactor}}</td>
           <td>
-              <a href="/rt/edit?service={{Service}}"><i class="icon-pencil"></i></a>
+              <a href="/service?name={{Service}}"><i class="icon-pencil"></i></a>
               <a href="#myModal" role="button" data-toggle="modal"><i class="icon-remove"></i></a>
           </td>
         </tr>
@@ -37,7 +37,7 @@
     <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
     <h3 id="myModalLabel">Create New Service</h3>
   </div>
-  <form class="form-horizontal" action="/new" method="post">
+  <form class="form-horizontal" action="/service/new" method="post">
     <div class="modal-body">
       <!-- full-name input-->
       <div class="control-group">
@@ -65,6 +65,17 @@
               <p class="help-block">How many times the data will be replicated. higher is more tolerant of failures, but slower inserts.  This can be changed.</p>
           </div>
       </div>
+    
+
+    <div class="control-group">
+          <label class="control-label">Partition Keys</label>
+          <div class="controls">
+              <input id="partition-keys" type="text" name="partition-keys"
+              class="input-xlarge">
+              <p class="help-block">The keys that this service should partition on.  These will be used in order, each originating request should contain at least one of these as params</p>
+          </div>
+      </div>
+
     </div>
     <div class="modal-footer">
       <button class="btn" data-dismiss="modal" aria-hidden="true">Close</button>
@@ -72,3 +83,10 @@
     </div>
   </form>
 </div>
+
+
+<script>
+  $(document).ready(function() {
+      $("#partition-keys").select2({tags:[]});
+    });
+</script>

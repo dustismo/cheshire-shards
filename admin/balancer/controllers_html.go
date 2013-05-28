@@ -8,7 +8,8 @@ import (
 
 func init() {
     cheshire.RegisterHtml("/", "GET", Index)
-    cheshire.RegisterHtml("/new", "POST", NewService)
+    cheshire.RegisterHtml("/service/delete", "POST", DeleteService)
+    cheshire.RegisterHtml("/service/new", "POST", NewService)
     cheshire.RegisterHtml("/service", "GET", Service)
     cheshire.RegisterHtml("/log", "GET", Log)
 }
@@ -23,6 +24,16 @@ func Index(txn *cheshire.Txn) {
 
 func Log(txn *cheshire.Txn) {
     cheshire.RenderInLayout(txn, "/log.html", "/template.html", nil)
+}
+
+func DeleteService(txn *cheshire.Txn) {
+    //TODO: remove the router table from the servs
+    name, ok := txn.Params().GetString("service-name")
+    if !ok {
+        cheshire.Flash(txn, "error", "Service Name is manditory")
+    }
+
+    Servs.Remove(name)
 }
 
 func NewService(txn *cheshire.Txn) {

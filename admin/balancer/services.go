@@ -25,8 +25,9 @@ var Servs = &Services{
 }
 
 func (this *Services) Load() error {
+    this.lock.Lock()
+    defer this.lock.Unlock()
     //attempt to load from datadir
-
     filename := fmt.Sprintf("%s/%s",this.DataDir, "services.json")
     bytes, err := ioutil.ReadFile(filename)
     if err != nil {
@@ -55,6 +56,9 @@ func (this *Services) Load() error {
 }
 
 func (this *Services) Save() error {
+    this.lock.Lock()
+    defer this.lock.Unlock()
+    
     mp := dynmap.NewDynMap()
     
     for k,v := range(this.services) {
@@ -87,8 +91,16 @@ func (this *Services) NewRouterTable(service string, totalshards int, repFactor 
     return nil
 }
 
+func (this *Services) Remove(service string) {
+    this.lock.Lock()
+    defer this.lock.Unlock()
+    delete(this.services, service)
+}
+
 func (this *Services) SetRouterTable(table *shards.RouterTable) {
+    this.lock.Lock()
     this.services[table.Service] = table
+    this.lock.Unlock()
     err := this.Save()
     if err != nil {
         log.Printf("Error saving %s", err)
@@ -96,12 +108,17 @@ func (this *Services) SetRouterTable(table *shards.RouterTable) {
 }
 
 func (this *Services) RouterTable(service string) (*shards.RouterTable, bool) {
+    this.lock.Lock()
+    defer this.lock.Unlock()
     t, ok := this.services[service]
     return t,ok
 }
 
 // Returns a sorted list of the available router tables.
 func (this *Services) RouterTables() ([]*shards.RouterTable) {
+    this.lock.Lock()
+    defer this.lock.Unlock()
+
     tables := make([]*shards.RouterTable, 0)
     var keys []string
     for k,_ := range(this.services) {

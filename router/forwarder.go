@@ -36,6 +36,8 @@ func NewMatcher() *Matcher {
 	return m
 }
 
+
+
 // Adds a new service to this router.
 // All endpoints matching /{serviceName}/ will be forwarded to that service.
 // at least 1 of the seedUrls must be in service 
@@ -114,7 +116,7 @@ func (this *Router) doReq(txn *cheshire.Txn) {
 
 	if !partitionFound {
 		//uhh, return error, or broadcast?
-
+		log.Println("No partition key found")
 	}
 
 	partitionKey := strings.Join(vals, "|")
@@ -126,7 +128,7 @@ func (this *Router) doReq(txn *cheshire.Txn) {
 
 	//Add the required params
 	txn.Request.Params().Put(shards.P_PARTITION, partition)
-	txn.Request.Params().Put(shards.P_ROUTER_TABLE_V, this.connections.RouterTable().Revision)
+	txn.Request.Params().Put(shards.P_REVISION, this.connections.RouterTable().Revision)
 
 	queryType := txn.Request.Params().MustString(shards.P_QUERY_TYPE, "all")
 
@@ -145,6 +147,7 @@ func (this *Router) doReq(txn *cheshire.Txn) {
 		count:     0,
 		max:       max,
 	}
+	this.apiCall(a)
 
 	//send response.
 	if len(a.responses) == 0 {
@@ -186,7 +189,8 @@ func (this *Router) apiCall(a *apiRR) {
 	entries, err := this.connections.Entries(a.partition)
 	if err != nil {
 		//TODO, do something here.
-		log.Println(err)
+		log.Printf("ERRROR %s", err)
+		return
 	}
 
 	//make sure this txnId is unique to each connection. 
@@ -196,9 +200,11 @@ func (this *Router) apiCall(a *apiRR) {
 	//easier then trying to do them in parallel.  
 	//
 	for _, entry := range entries {
+
+		log.Println(entry)
 		c, err := entry.Client()
 		if err != nil {
-			log.Println("ERR %s", err)
+			log.Printf("ERR %s", err)
 			//TODO: Add to retry queue
 			continue
 		}

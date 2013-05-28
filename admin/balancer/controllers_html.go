@@ -34,7 +34,13 @@ func NewService(txn *cheshire.Txn) {
     }
 
     replication := txn.Params().MustInt("replication", 2)
-    err := Servs.NewRouterTable(name, 512, replication)
+    partitions := txn.Params().MustInt("total-partitions", 512)
+    partitionKeys, ok := txn.Params().GetStringSliceSplit("partition-keys", ",")
+    if !ok {
+        cheshire.Flash(txn, "error", "Partition keys is manditory")
+    }
+    log.Println(partitionKeys)
+    err := Servs.NewRouterTable(name, partitions, replication, partitionKeys)
     if err != nil {
         cheshire.Flash(txn, "error", fmt.Sprintf("%s",err))
         cheshire.Redirect(txn, "/index")

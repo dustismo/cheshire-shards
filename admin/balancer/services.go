@@ -71,7 +71,7 @@ func (this *Services) Save() error {
 }
 
 //Will create and save a new router table. 
-func (this *Services) NewRouterTable(service string, totalshards int, repFactor int) error {
+func (this *Services) NewRouterTable(service string, totalshards int, repFactor int, partitionKeys []string) error {
     
     _, ok := this.RouterTable(service)
     if ok {
@@ -82,6 +82,7 @@ func (this *Services) NewRouterTable(service string, totalshards int, repFactor 
     rt := shards.NewRouterTable(service)
     rt.TotalPartitions = totalshards
     rt.ReplicationFactor= repFactor
+    rt.PartitionKeys = partitionKeys
     this.SetRouterTable(rt)
     return nil
 }

@@ -82,6 +82,15 @@
                 {{replication_factor}}
               </td>
           </tr>
+          <tr>         
+              <td>Partition Keys</td>
+              <td>
+                {{#partition_keys}}
+                  {{.}}<br />
+
+                {{/partition_keys}}
+              </td>
+          </tr>
       </tbody>
   </table>
 </script>

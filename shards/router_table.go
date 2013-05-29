@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/trendrr/goshire/dynmap"
 	"time"
-	// "log"
 )
 
 // A router table.
@@ -285,12 +284,6 @@ type RouterEntry struct {
 	JsonPort int
 	HttpPort int
 
-	//Is this entry me?
-	Self bool
-
-	//set for last ping time
-	LastSeenAt time.Time
-
 	//list of partitions this entry is responsible for (master only)
 	Partitions []int
 
@@ -304,7 +297,6 @@ type RouterEntry struct {
 // Creates a new router entry from the dynmap passed in
 func ToRouterEntry(mp *dynmap.DynMap) (*RouterEntry, error) {
 	e := &RouterEntry{
-		Self:          false,
 		PartitionsMap: make(map[int]bool),
 	}
 	var ok bool
@@ -315,7 +307,6 @@ func ToRouterEntry(mp *dynmap.DynMap) (*RouterEntry, error) {
 
 	e.JsonPort = mp.MustInt("ports.json", 0)
 	e.HttpPort = mp.MustInt("ports.http", 0)
-	e.LastSeenAt = mp.MustTime("last_seen_at", *new(time.Time))
 	e.Partitions, ok = mp.GetIntSlice("partitions")
 	if !ok {
 		e.Partitions = make([]int, 0)
@@ -358,7 +349,6 @@ func (this *RouterEntry) ToDynMap() *dynmap.DynMap {
 	}
 	mp.Put("id", this.Id())
 	mp.Put("partitions", this.Partitions)
-	mp.Put("last_seen_at", this.LastSeenAt)
 	this.DynMap = mp
 	return mp
 }

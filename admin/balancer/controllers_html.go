@@ -8,9 +8,9 @@ import (
 
 func init() {
     cheshire.RegisterHtml("/", "GET", Index)
-    cheshire.RegisterHtml("/new", "POST", NewService)
-    cheshire.RegisterHtml("/rt/edit", "GET", Service)
-    cheshire.RegisterHtml("/service", "GET", Service2)
+    cheshire.RegisterHtml("/service/delete", "POST", DeleteService)
+    cheshire.RegisterHtml("/service/new", "POST", NewService)
+    cheshire.RegisterHtml("/service", "GET", Service)
     cheshire.RegisterHtml("/log", "GET", Log)
 }
 
@@ -26,6 +26,16 @@ func Log(txn *cheshire.Txn) {
     cheshire.RenderInLayout(txn, "/log.html", "/template.html", nil)
 }
 
+func DeleteService(txn *cheshire.Txn) {
+    //TODO: remove the router table from the servs
+    name, ok := txn.Params().GetString("service-name")
+    if !ok {
+        cheshire.Flash(txn, "error", "Service Name is manditory")
+    }
+
+    Servs.Remove(name)
+}
+
 func NewService(txn *cheshire.Txn) {
     log.Println(txn.Params())
 
@@ -34,20 +44,29 @@ func NewService(txn *cheshire.Txn) {
         cheshire.Flash(txn, "error", "Service Name is manditory")
     }
 
-    err := Servs.NewRouterTable(name, 512, 2)
+    replication := txn.Params().MustInt("replication", 2)
+    partitions := txn.Params().MustInt("total-partitions", 512)
+    partitionKeys, ok := txn.Params().GetStringSliceSplit("partition-keys", ",")
+    if !ok {
+        cheshire.Flash(txn, "error", "Partition keys is manditory")
+    }
+    log.Println(partitionKeys)
+    err := Servs.NewRouterTable(name, partitions, replication, partitionKeys)
     if err != nil {
         cheshire.Flash(txn, "error", fmt.Sprintf("%s",err))
+        cheshire.Redirect(txn, "/index")
     } else {
         cheshire.Flash(txn, "success", "successfully created router table")    
+        cheshire.Redirect(txn, fmt.Sprintf("/service?name=%s", name))
     }
-    cheshire.Redirect(txn, "/index")
+   
 }
 
-func Service2(txn *cheshire.Txn) {
+func Service(txn *cheshire.Txn) {
     //create a context map to be passed to the template
     context := make(map[string]interface{})
 
-    service, ok := Servs.RouterTable(txn.Params().MustString("service", ""))
+    service, ok := Servs.RouterTable(txn.Params().MustString("name", ""))
     if !ok {
         cheshire.Flash(txn, "error", fmt.Sprintf("Cant find service"))
         cheshire.Redirect(txn, "/index")
@@ -55,18 +74,4 @@ func Service2(txn *cheshire.Txn) {
     }
     context["service"] = service.Service 
     cheshire.RenderInLayout(txn, "/service.html", "/template.html", context)
-}
-
-func Service(txn *cheshire.Txn) {
-    //create a context map to be passed to the template
-    context := make(map[string]interface{})
-
-    service, ok := Servs.RouterTable(txn.Params().MustString("service", ""))
-    context["service"] = service 
-    if !ok {
-        cheshire.Flash(txn, "error", fmt.Sprintf("Cant find service"))
-        cheshire.Redirect(txn, "/index")
-        return
-    }
-    cheshire.RenderInLayout(txn, "/router_table.html", "/template.html", context)
 }

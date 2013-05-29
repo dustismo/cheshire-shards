@@ -3,14 +3,16 @@ package balancer
 import (
     "github.com/trendrr/goshire/cheshire"
     clog "github.com/trendrr/goshire/log"
-    shards "github.com/dustismo/cheshire-shards/shards"
+    "github.com/trendrr/goshire-shards/shards"
     "log"
     "fmt"
+    "time"
 )
 
 func init() {
     cheshire.RegisterApi("/api/log", "GET", ConsoleLog)
     cheshire.RegisterApi("/api/service", "GET", ServiceGet)
+    cheshire.RegisterApi("/api/service/sub/checkins", "GET", ServiceCheckins)
     cheshire.RegisterApi("/api/shard/new", "PUT", ShardNew)
 }
 
@@ -25,6 +27,43 @@ func ServiceGet(txn *cheshire.Txn) {
     txn.Write(res)
 }
 
+// checks into all the services every 30 seconds, sends an updated rt every time
+func ServiceCheckins(txn *cheshire.Txn) {
+    log.Println("Service checkin registered")
+    routerTable, ok := Servs.RouterTable(txn.Params().MustString("service", ""))
+    if !ok {
+        cheshire.SendError(txn, 406, "Service param missing or service not found")
+        return
+    }
+    for {
+        for _, e := range(routerTable.Entries) {
+            err := EntryContact(e)
+            if err != nil {
+                Servs.Logger.Printf("Error contacting %s -- %s", e.Id(), err)
+                continue
+            }
+            Servs.Logger.Printf("Successfully Pinged %s", e.Id())
+            
+        }
+        //send a router table update, in case anything changed
+        res := cheshire.NewResponse(txn)
+        res.SetTxnStatus("continue")
+
+
+        routerTable, _ = Servs.RouterTable(routerTable.Service)
+        res.Put("router_table", routerTable.ToDynMap())
+        _, err := txn.Write(res)
+        if err != nil {
+            //try and write an error response
+            cheshire.SendError(txn, 510, fmt.Sprintf("%s",err))
+            return   
+        }
+
+        time.Sleep(45 * time.Second)
+    }
+
+
+}
 
 // Handles the rebalance operation. 
 // will push an updated router table everytime it changes.
@@ -106,11 +145,12 @@ func ShardNew(txn *cheshire.Txn) {
 
     //check if we can connect!
     Servs.Logger.Printf("Attempting to connect to new entry...")
-    // _, _, err := EntryCheckin(routerTable, entry)
-    // if err != nil {
-    //     cheshire.SendError(txn, 406, fmt.Sprintf("Unable to contact %s:%d Error(%s)", entry.Address, entry.HttpPort, err))
-    //     return
-    // }
+    err := EntryContact(entry)
+    if err != nil {
+        Servs.Logger.Printf("ERROR: ", err)
+        cheshire.SendError(txn, 406, fmt.Sprintf("Unable to contact %s:%d Error(%s)", entry.Address, entry.HttpPort, err))
+        return
+    }
     Servs.Logger.Printf("Success!")
 
     if len(routerTable.Entries) == 0 {
@@ -131,7 +171,7 @@ func ShardNew(txn *cheshire.Txn) {
         // not the first entry, 
     }
     
-    routerTable, err := routerTable.AddEntries(entry)
+    routerTable, err = routerTable.AddEntries(entry)
     if err != nil {
         cheshire.SendError(txn, 501, fmt.Sprintf("Error on add entry %s", err))
         return
@@ -140,6 +180,15 @@ func ShardNew(txn *cheshire.Txn) {
     Servs.Logger.Printf("Successfully created new entry: %s", entry.Id())
 
     Servs.SetRouterTable(routerTable)
+
+    Servs.Logger.Printf("Attempting to sending new router table to entry")
+    _, _, err = EntryCheckin(routerTable, entry)
+
+    if err != nil {
+        Servs.Logger.Printf("ERROR %s", err)
+        cheshire.SendError(txn, 501, fmt.Sprintf("Error on entry checkin %s", err))
+        return
+    }
 
     res := cheshire.NewResponse(txn)
     res.Put("router_table", routerTable.ToDynMap())

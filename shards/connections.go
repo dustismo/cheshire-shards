@@ -105,6 +105,8 @@ func (this *Connections) InitFromSeed(urls ...string) error {
 }
 
 func (this *Connections) RouterTable() *RouterTable {
+	this.lock.RLock()
+	defer this.lock.RUnlock()
 	return this.table
 }
 
@@ -125,6 +127,13 @@ func (this *Connections) Entries(partition int) ([]*EntryClient, error) {
 		return nil, fmt.Errorf("Partition %d is out of range", partition)
 	}
 	return this.connections[partition], nil
+}
+
+// Sets the client creator 
+func (this *Connections) SetClientCreator(c ClientCreator) {
+	this.lock.Lock()
+	defer this.lock.Unlock()
+	this.clientCreator = c
 }
 
 // Creates a new EntryClient

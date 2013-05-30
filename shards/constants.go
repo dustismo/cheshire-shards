@@ -76,5 +76,6 @@ const (
 	// single : return a single result (the first response received)
 	// all : (default) return values for all servers, will make an effort to retry on failure, but will generally return error results.
 	// all_q : return values for all servers (queue requests if needed, retry until response).  This would typically be for posting
+	// none_q : returns success immediately, queues the request and make best effort to ensure it is delivered (TODO)
 	P_QUERY_TYPE = "_qt"
 )

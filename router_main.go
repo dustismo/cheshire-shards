@@ -5,27 +5,34 @@ package main
 //
 import (
     "log"
-    "github.com/trendrr/goshire/cheshire"
+    // "github.com/trendrr/goshire/cheshire"
     "github.com/trendrr/goshire-shards/router"
-       
+    // "os"
 )
 
 
 
 func main() {
-    
-    bootstrap := cheshire.NewBootstrapFile("router_config.yaml")
 
-    matcher := router.NewMatcher()
-    bootstrap.Conf.Router = matcher
+    // lf, err := os.Create("router.log")
+    // if err != nil {
+    //     log.Panicf("Coulding open log file -- %s", err)
+    // }
+    // //log to a file
+    // log.SetOutput(lf)
+
+    r := router.NewServerFile("router_config.yaml")
+
 
 
     //now add the services.
-    matcher.AddService("http://localhost:8010")
-
+    err := r.AddService("http://localhost:8010")
+    if err != nil {
+        log.Panic(err)
+    }
 
 
     log.Println("Starting")
     //starts listening on all configured interfaces
-    bootstrap.Start()
+    r.Start()
 }

@@ -23,7 +23,8 @@
           <td>{{ReplicationFactor}}</td>
           <td>
               <a href="/service?name={{Service}}"><i class="icon-pencil"></i></a>
-              <a href="#myModal" role="button" data-toggle="modal"><i class="icon-remove"></i></a>
+              <a href="#deleteService" role="button" data-toggle="modal" data-service="{{Service}}" class="openDeleteModal">
+                <i class="icon-remove"></i></a>
           </td>
         </tr>
         {{/services}}
@@ -31,6 +32,25 @@
 </table>
 </div>
 </div>
+<!-- Delete modal box -->
+<div id="deleteService" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+    <h3 id="myModalLabel">Delete Service</h3>
+  </div>
+  <form class="form-horizontal" action="/service/delete" method="post">
+    <div class="modal-body">
+      Are you sure you want to delete service <span id="serviceIdText"></span>?
+      <input type="hidden" id="serviceId" name="service-name" value="" />
+    </div>
+    
+    <div class="modal-footer">
+      <button class="btn btn-primary" data-dismiss="modal" aria-hidden="true">Don't Delete</button>
+      <button class="btn">Delete</button>
+    </div>
+  </form>
+</div>
+
 
 <div id="newService" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
   <div class="modal-header">
@@ -84,9 +104,13 @@
   </form>
 </div>
 
-
 <script>
   $(document).ready(function() {
       $("#partition-keys").select2({tags:[]});
     });
+  $(document).on("click", ".openDeleteModal",function(){
+    var s = $(this).data('service')
+    $(".modal-body #serviceId").val(s);
+    $(".modal-body #serviceIdText").html(s);
+  });
 </script>

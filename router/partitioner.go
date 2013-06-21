@@ -2,15 +2,15 @@ package router
 
 
 
-// This partitions a the input string into an int between 0 (inclusive) and max (exclusive) 
-type Partitioner interface {
-    Partition(input string, max int) (int, error)
+// This hashes a the input string into an int between 0 (inclusive) and max (exclusive) 
+type Hasher interface {
+    Hash(input string, max int) (int, error)
 }
 
+type DefaultHasher struct {
 
-type DefaultPartitioner struct {
 }
 
-func (this *DefaultPartitioner) Partition(input string, max int) (int, error) {
+func (this *DefaultHasher) Hash(input string, max int) (int, error) {
     return 0, nil
 }

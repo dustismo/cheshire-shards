@@ -15,7 +15,7 @@ import (
 // This conforms to the cheshire.Client interface.
 type Client struct {
 	connections *shards.Connections
-	partitioner Partitioner
+	hasher Hasher
 }
 
 // creates a new client from seed urls.  
@@ -31,7 +31,7 @@ func NewClientFromSeed(seedUrls ...string) (*Client, error) {
 	}
 
     client.connections = connections
-    client.partitioner = &DefaultPartitioner{}
+    client.hasher = &DefaultHasher{}
  	return client, nil
 }
 
@@ -61,7 +61,7 @@ func (this *Client) ApiCallSync(req *cheshire.Request, timeout time.Duration) (*
 
 	partitionKey := strings.Join(vals, "|")
 
-	partition, err := this.partitioner.Partition(partitionKey, this.connections.RouterTable().TotalPartitions)
+	partition, err := this.hasher.Hash(partitionKey, this.connections.RouterTable().TotalPartitions)
 	if err != nil {
 		return nil, err
 	}

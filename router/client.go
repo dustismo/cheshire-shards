@@ -1,13 +1,13 @@
 package router
 
 import (
-    "fmt"
-    "github.com/trendrr/goshire-shards/shards"
-    "github.com/trendrr/goshire/cheshire"
-    "github.com/trendrr/goshire/client"
-    "log"
-    "time"
-    "strings"
+	"fmt"
+	"github.com/trendrr/goshire-shards/shards"
+	"github.com/trendrr/goshire/cheshire"
+	"github.com/trendrr/goshire/client"
+	"log"
+	"strings"
+	"time"
 )
 
 // This is a client that maintains connections
@@ -15,12 +15,12 @@ import (
 // This conforms to the cheshire.Client interface.
 type Client struct {
 	connections *shards.Connections
-	hasher Hasher
+	hasher      Hasher
 }
 
-// creates a new client from seed urls.  
+// creates a new client from seed urls.
 func NewClientFromSeed(seedUrls ...string) (*Client, error) {
- 	client := &Client{}
+	client := &Client{}
 
 	connections := &shards.Connections{}
 	connections.SetClientCreator(client)
@@ -30,9 +30,9 @@ func NewClientFromSeed(seedUrls ...string) (*Client, error) {
 		return nil, err
 	}
 
-    client.connections = connections
-    client.hasher = &DefaultHasher{}
- 	return client, nil
+	client.connections = connections
+	client.hasher = &DefaultHasher{}
+	return client, nil
 }
 
 // a syncronous api call.
@@ -82,7 +82,7 @@ func (this *Client) ApiCallSync(req *cheshire.Request, timeout time.Duration) (*
 		queryType: queryType,
 		responses: make(map[string]*cheshire.Response),
 		response:  cheshire.NewResponse(req),
-		request: req,
+		request:   req,
 		count:     0,
 		max:       max,
 	}
@@ -101,14 +101,14 @@ func (this *Client) ApiCallSync(req *cheshire.Request, timeout time.Duration) (*
 
 	return a.response, nil
 }
-	
+
 // Dont use, this is not implemented
 func (this *Client) ApiCall(req *cheshire.Request, responseChan chan *cheshire.Response, errorChan chan error) error {
 	log.Println("ERROR ApiCall in router.Client not implemented, use the syncronous one!")
 	return fmt.Errorf("ERROR ApiCall in router.Client not implemented, use the syncronous one!")
 }
 
-	//Closes this client
+//Closes this client
 func (this *Client) Close() {
 	//TODO
 }
@@ -130,12 +130,10 @@ type apiRR struct {
 	queryType string
 	responses map[string]*cheshire.Response
 	response  *cheshire.Response
-	request *cheshire.Request
+	request   *cheshire.Request
 	count     int
 	max       int
 }
-
-
 
 // Does the actual apiCall
 // keeps track of all the responses in the responses map
@@ -156,11 +154,11 @@ func (this *Client) apiCall(a *apiRR) {
 		return
 	}
 
-	//make sure this txnId is unique to each connection. 
+	//make sure this txnId is unique to each connection.
 	a.request.SetTxnId(fmt.Sprintf("%d", client.NewTxnId()))
 
 	//Fuck it, just do the calls serially, this makes life soo much
-	//easier then trying to do them in parallel.  
+	//easier then trying to do them in parallel.
 	//
 	for _, entry := range entries {
 		c, err := entry.Client()
@@ -211,7 +209,7 @@ func (this *Client) apiCall(a *apiRR) {
 		return
 	}
 
-	// we did not all responses.  
+	// we did not all responses.
 	// give it a rest, then try again
 	time.Sleep(1 * time.Second)
 	//Tail Recursion YAY!

@@ -27,7 +27,7 @@ type Service interface {
 	DeletePartition(partition int) error
 }
 
-// A dummy service 
+// A dummy service
 type DummyService struct {
 }
 
@@ -41,7 +41,7 @@ func (this *DummyService) SetData(partition int, data *dynmap.DynMap) {
 
 func (this *DummyService) DeletePartition(partition int) error {
 	log.Printf("Requesting DeletePartiton from dummy service, ignoring.. (partition: %d)", partition)
-    return nil
+	return nil
 }
 
 type EventType string
@@ -62,7 +62,7 @@ type Manager struct {
 	lockedPartitions map[int]bool
 }
 
-// Creates a new manager.  Uses the one or more seed urls to download the 
+// Creates a new manager.  Uses the one or more seed urls to download the
 // routing table.
 func NewManagerSeed(service Service, serviceName, dataDir, myEntryId string, seedHttpUrls ...string) (*Manager, error) {
 	//TODO: can we get the servicename from the routing table?
@@ -122,7 +122,7 @@ func (this *Manager) UnlockPartition(partition int) error {
 	return nil
 }
 
-// Returns the list of partitions I am responsible for 
+// Returns the list of partitions I am responsible for
 // returns an empty list if I am not responsible for any
 func (this *Manager) MyPartitions() map[int]bool {
 	this.lock.RLock()
@@ -142,7 +142,7 @@ func (this *Manager) MyPartitions() map[int]bool {
 // This is also how we test for locked partitions.
 //
 // returns responsibility, locked
-// 
+//
 func (this *Manager) MyResponsibility(partition int) (bool, bool) {
 	this.lock.RLock()
 	defer this.lock.RUnlock()
@@ -162,8 +162,8 @@ func (this *Manager) SetService(par Service) {
 	this.service = par
 }
 
-// Does a checkin with the requested client.  returns the 
-// router table revision of the connection.  
+// Does a checkin with the requested client.  returns the
+// router table revision of the connection.
 func (this *Manager) Checkin(client client.Client) (int64, error) {
 	response, err := client.ApiCallSync(cheshire.NewRequest(CHECKIN, "GET"), 10*time.Second)
 	if err != nil {
@@ -228,15 +228,15 @@ func (this *Manager) RouterTable() (*RouterTable, error) {
 	if this.connections == nil {
 		return nil, fmt.Errorf("No Router Table available")
 	}
-    rt := this.connections.RouterTable()
-    if rt == nil {
-        return rt, fmt.Errorf("No RouterTable available")
-    }
+	rt := this.connections.RouterTable()
+	if rt == nil {
+		return rt, fmt.Errorf("No RouterTable available")
+	}
 
 	return rt, nil
 }
 
-// Sets a new router table, returns the old one 
+// Sets a new router table, returns the old one
 func (this *Manager) SetRouterTable(rt *RouterTable) (*RouterTable, error) {
 	if rt.Service != this.ServiceName {
 		return nil, fmt.Errorf("Error cannot set router table for service %s, should be service %s", rt.Service, this.ServiceName)

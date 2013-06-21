@@ -17,7 +17,7 @@ type RouterTable struct {
 
 	//The revision # of the router table
 	//this should be always increasing so greater revision means more upto date router table
-	//this should typically be a timestamp 
+	//this should typically be a timestamp
 	Revision int64
 
 	//total # of partitions
@@ -60,7 +60,7 @@ func (this *RouterTable) UpdateRevision() (previous, current int64) {
 	return prev, this.Revision
 }
 
-//Rebuilds this router table, if you changed anything, you should call this and use the newly built 
+//Rebuilds this router table, if you changed anything, you should call this and use the newly built
 //table
 func (this *RouterTable) Rebuild() (*RouterTable, error) {
 	total := 0
@@ -185,7 +185,7 @@ func ToRouterTable(mp *dynmap.DynMap) (*RouterTable, error) {
 	t.DynMap = t.toDynMap()
 
 	t.EntriesPartition = make([][]*RouterEntry, t.TotalPartitions)
-	//Now setup the replication partitions. 
+	//Now setup the replication partitions.
 	for _, e := range t.Entries {
 
 		for _, p := range e.Partitions {
@@ -244,7 +244,7 @@ func (this *RouterTable) ToDynMap() *dynmap.DynMap {
 
 //gets the partitions that should replicate this master.
 func (this *RouterTable) repPartitions(partition int, entry *RouterEntry) ([]int, error) {
-	//This method could be much better optimized, but 
+	//This method could be much better optimized, but
 	//it is fairly rare, so we wont worry about it..
 	entries := make([]int, 0)
 	if partition >= this.TotalPartitions {
@@ -269,7 +269,7 @@ func (this *RouterTable) repPartitions(partition int, entry *RouterEntry) ([]int
 }
 
 // Gets the entries associated with the given partition
-// [0] should be the master entry, and there should be 
+// [0] should be the master entry, and there should be
 // table.ReplicationFactor number of entries
 func (this *RouterTable) PartitionEntries(partition int) ([]*RouterEntry, error) {
 	if partition >= this.TotalPartitions {

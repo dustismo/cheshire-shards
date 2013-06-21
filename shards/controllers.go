@@ -17,7 +17,7 @@ func SM() *Manager {
 	return sm
 }
 
-// Sets the partitioner and registers the necessary 
+// Sets the partitioner and registers the necessary
 // controllers
 func RegisterServiceControllers(man *Manager) {
 	sm = man

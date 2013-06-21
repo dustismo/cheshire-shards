@@ -33,10 +33,10 @@ func (this *EntryClient) Client() (client.Client, error) {
 	//upgrade to a write lock
 	this.lock.Lock()
 	defer this.lock.Unlock()
-	//need to check again because there is a window between giving up the readlock 
+	//need to check again because there is a window between giving up the readlock
 	// and aquiring the write lock.
 	if this.created {
-		//someone else got to it before we did 
+		//someone else got to it before we did
 		return this.client, nil
 	}
 
@@ -46,7 +46,6 @@ func (this *EntryClient) Client() (client.Client, error) {
 		return this.client, fmt.Errorf("No client available, will try to connect again in a few seconds")
 	}
 	//now attempt to connect.
-
 
 	c, err := this.clientCreator.Create(this.Entry)
 	this.client = c
@@ -58,7 +57,7 @@ func (this *EntryClient) Client() (client.Client, error) {
 }
 
 //creates a client from a router entry
-// supplying a custom one makes it easy to 
+// supplying a custom one makes it easy to
 // change between http/json ect.
 type ClientCreator interface {
 	Create(entry *RouterEntry) (client.Client, error)
@@ -73,13 +72,13 @@ type Connections struct {
 	clientCreator ClientCreator
 	//entries organized by entry id
 	entries map[string]*EntryClient
-	//a channel you can listen for 
+	//a channel you can listen for
 	// router table changes
 	// this will send the OLD router table
 	RouterTableChange chan *RouterTable
 }
 
-// Loads the router table from one or more of the urls 
+// Loads the router table from one or more of the urls
 func ConnectionsFromSeed(urls ...string) (*Connections, error) {
 	connections := &Connections{}
 	connections.clientCreator = connections
@@ -129,7 +128,7 @@ func (this *Connections) Entries(partition int) ([]*EntryClient, error) {
 	return this.connections[partition], nil
 }
 
-// Sets the client creator 
+// Sets the client creator
 func (this *Connections) SetClientCreator(c ClientCreator) {
 	this.lock.Lock()
 	defer this.lock.Unlock()
@@ -147,7 +146,7 @@ func (this *Connections) createEntryClient(entry *RouterEntry) *EntryClient {
 }
 
 // Sets a new router table.
-// will close and remove and client connections that no longer exist. 
+// will close and remove and client connections that no longer exist.
 // will return an error on any problem, in which case the old router table
 // should remain intact.
 // Returns the old router table

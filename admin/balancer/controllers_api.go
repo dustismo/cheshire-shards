@@ -154,12 +154,8 @@ func ShardNew(txn *cheshire.Txn) {
     Servs.Logger.Printf("Success!")
 
     if len(routerTable.Entries) == 0 {
-        totalPartitions, ok := txn.Params().GetInt("total_partitions")
-        if !ok {
-            cheshire.SendError(txn, 406, "total_partitions param is manditory for the first entry")
-            return
-        }
-
+        totalPartitions := routerTable.TotalPartitions
+        
         //first entry, giving it all the partitions
         Servs.Logger.Printf("First Entry! giving it all %d partitions", totalPartitions)
         partitions := make([]int, 0)

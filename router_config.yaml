@@ -5,9 +5,4 @@ http:
 json:
    port: 8014
 
-services:
-   test:
-      seeds:
-         -localhost:8010
-
          

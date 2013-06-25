@@ -34,6 +34,7 @@ func DeleteService(txn *cheshire.Txn) {
     }
 
     Servs.Remove(name)
+    cheshire.Redirect(txn, "/index")
 }
 
 func NewService(txn *cheshire.Txn) {

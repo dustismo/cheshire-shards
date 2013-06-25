@@ -40,7 +40,7 @@ func RequestRouterTable(c client.Client) (*RouterTable, error) {
 func PartitionParam(txn *cheshire.Txn) (int, bool) {
 	partition, ok := txn.Params().GetInt(P_PARTITION)
 	if !ok {
-		cheshire.SendError(txn, 406, fmt.Sprintf("partition param is manditory"))
+		cheshire.SendError(txn, 406, fmt.Sprintf("partition param (%s) is manditory", P_PARTITION))
 		return 0, false
 	}
 

@@ -92,6 +92,8 @@ func (this *Services) NewRouterTable(service string, totalshards int, repFactor 
 }
 
 func (this *Services) Remove(service string) {
+    //defers are executed in the reverse order
+    defer this.Save()
     this.lock.Lock()
     defer this.lock.Unlock()
     delete(this.services, service)

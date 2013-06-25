@@ -29,7 +29,7 @@ func main() {
     // log.SetOutput(lf)
     flag.Parse()
 
-    r := router.NewServerFile("router_config.yaml")
+    r := router.NewServerFile(*config)
 
     log.Println(*seedAddress)
     addresses := make([]string, 0)

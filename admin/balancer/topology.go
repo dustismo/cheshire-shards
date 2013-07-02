@@ -90,6 +90,7 @@ func EntryContact(entry *shards.RouterEntry) error {
         return fmt.Errorf("ERROR While contacting %s -- %s", entry.Address, err)
     }
     _, ok := response.GetInt64("rt_revision")
+
     if !ok {
         return fmt.Errorf("ERROR No rt_revision in response from %s -- Status(%s)", entry.Address, response.StatusMessage())
     }
@@ -99,6 +100,7 @@ func EntryContact(entry *shards.RouterEntry) error {
 // Checkin to an entry.  will update their router table if it is out of date.  will update our router table if out of date.
 // returns the updated router table, updated, error
 func EntryCheckin(routerTable *shards.RouterTable, entry *shards.RouterEntry) (*shards.RouterTable, bool, error) {
+        log.Println("ENTRY CHECKING, %s", entry)
         // make sure our routertable is up to date.
         response, err := client.HttpApiCallSync(
             fmt.Sprintf("%s:%d", entry.Address, entry.HttpPort),

@@ -12,6 +12,7 @@ import (
 func init() {
     cheshire.RegisterApi("/api/log", "GET", ConsoleLog)
     cheshire.RegisterApi("/api/service", "GET", ServiceGet)
+    cheshire.RegisterApi("/api/service/update", "GET", ServiceUpdate)
     cheshire.RegisterApi("/api/service/sub/checkins", "GET", ServiceCheckins)
     cheshire.RegisterApi("/api/shard/new", "PUT", ShardNew)
 }
@@ -27,6 +28,35 @@ func ServiceGet(txn *cheshire.Txn) {
     txn.Write(res)
 }
 
+// Updates the router table on all entries
+func ServiceUpdate(txn *cheshire.Txn) {
+    log.Println("Service checkin registered")
+    routerTable, ok := Servs.RouterTable(txn.Params().MustString("service", ""))
+    if !ok {
+        cheshire.SendError(txn, 406, "Service param missing or service not found")
+        return
+    }
+    
+    for _, e := range(routerTable.Entries) {
+        _, updated, err := EntryCheckin(routerTable, e)
+        if err != nil {
+            Servs.Logger.Printf("Error contacting %s -- %s", e.Id(), err)
+            continue
+        }
+        if updated {
+            Servs.Logger.Printf("Updated router table %s", e.Id())
+        } else {
+            Servs.Logger.Printf("Router table upto date on %s", e.Id())
+        }
+    }
+    //send a router table update, in case anything changed
+    res := cheshire.NewResponse(txn)
+    routerTable, _ = Servs.RouterTable(routerTable.Service)
+    res.Put("router_table", routerTable.ToDynMap())
+    txn.Write(res)
+}
+
+
 // checks into all the services every 30 seconds, sends an updated rt every time
 func ServiceCheckins(txn *cheshire.Txn) {
     log.Println("Service checkin registered")
@@ -36,6 +66,7 @@ func ServiceCheckins(txn *cheshire.Txn) {
         return
     }
     for {
+
         for _, e := range(routerTable.Entries) {
             err := EntryContact(e)
             if err != nil {
@@ -60,6 +91,12 @@ func ServiceCheckins(txn *cheshire.Txn) {
         }
 
         time.Sleep(45 * time.Second)
+        //refresh the router table on every pass
+        routerTable, ok = Servs.RouterTable(txn.Params().MustString("service", ""))
+        if !ok {
+            cheshire.SendError(txn, 406, "Problem finding router table")
+            return
+        }
     }
 
 
@@ -154,12 +191,8 @@ func ShardNew(txn *cheshire.Txn) {
     Servs.Logger.Printf("Success!")
 
     if len(routerTable.Entries) == 0 {
-        totalPartitions, ok := txn.Params().GetInt("total_partitions")
-        if !ok {
-            cheshire.SendError(txn, 406, "total_partitions param is manditory for the first entry")
-            return
-        }
-
+        totalPartitions := routerTable.TotalPartitions
+        
         //first entry, giving it all the partitions
         Servs.Logger.Printf("First Entry! giving it all %d partitions", totalPartitions)
         partitions := make([]int, 0)

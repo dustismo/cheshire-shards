@@ -48,11 +48,13 @@ func HandleShardConns(conn net.Conn, protocol cheshire.Protocol, server *Server)
     //TODO Find service..
     service, err := server.Service("")
     if err != nil {
+        log.Println(err)
         return err
     }
 
     sc, err := NewShardConns(service, protocol)
     if err != nil {
+        log.Println(err)
         return err
     }
     
@@ -69,6 +71,7 @@ func HandleShardConns(conn net.Conn, protocol cheshire.Protocol, server *Server)
         }
         sc.requestChan <- req
     }
+    log.Println("RETURNING!")
     return nil
 }
 
@@ -145,6 +148,13 @@ func (this *ShardConns) proxy() {
                 //ready to send upstream
             }
             con := this.Partitions[req.Shard.Partition]
+
+            if con == nil {
+                log.Print("Error no connection for partition %d", req.Shard.Partition)
+                //TODO: send error
+                break
+            }
+
             _, err := this.protocol.WriteRequest(req, con.Writer)
             if err != nil {
                 log.Print(err)
@@ -184,8 +194,11 @@ func NewShardConn(entry *shards.RouterEntry, parent *ShardConns) (*ShardConn, er
         port = entry.JsonPort 
     } else if parent.protocol.Type() == "bin" {
         port = entry.BinPort
+        port = 8011 //TODO remove me!
     }
-
+    if port == 0 {
+        return nil, fmt.Errorf("ERROR No port found for entry %s", entry)
+    }
 
     conn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%d",entry.Address,port), 5*time.Second)
     if err != nil {
@@ -206,7 +219,7 @@ func NewShardConn(entry *shards.RouterEntry, parent *ShardConns) (*ShardConn, er
 
 func (this *ShardConn) listen() {
     defer this.parent.Close()
-
+    log.Println("LISTEN!")
     decoder := this.parent.protocol.NewDecoder(this.Reader)
 
     for {

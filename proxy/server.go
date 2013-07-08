@@ -134,9 +134,11 @@ func protocollisten(protocol cheshire.Protocol, port int, server *Server) error 
         log.Println(err)
         return err
     }
-    log.Printf("%s Listener on port: ", port, protocol.Type())
+    log.Printf("%s Listener on port: %d", protocol.Type(), port)
     for {
         conn, err := ln.Accept()
+
+        log.Printf("ACCEPT! %s", conn)
         if err != nil {
             log.Print(err)
             // handle error

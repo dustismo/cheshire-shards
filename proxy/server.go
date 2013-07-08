@@ -2,12 +2,12 @@ package proxy
 
 import (
     "fmt"
-    // "github.com/trendrr/goshire-shards/shards"
+    "github.com/trendrr/goshire-shards/shards"
     "github.com/trendrr/goshire/cheshire"
+    "github.com/trendrr/goshire/client"
     "log"
-    "strings"
-    "time"
-    "sync"
+    "net"
+
 )
 
 // What the proxy needs to do:
@@ -21,9 +21,8 @@ import (
 type Server struct {
     //the bootstrap
     Bootstrap *cheshire.Bootstrap
-    services  map[string]*RouterTable
+    services  map[string]*Service
     Config *cheshire.ServerConfig
-    lock sync.RWMutex
 }
 
 
@@ -36,7 +35,7 @@ func NewServer(config *cheshire.ServerConfig) *Server {
     //create the config
     s := &Server{
         Bootstrap: cheshire.NewBootstrap(config),
-        services:  make(map[string]*RouterTable),
+        services:  make(map[string]*Service),
         Config: config,
     }
     return s
@@ -48,28 +47,30 @@ func (this *Server) Seeds(urls ...string) {
         c := client.NewHttp(url)
         rt, err := shards.RequestRouterTable(c)
         if err == nil {
-            this.SetRouterTable(rt)
+            this.RegisterService(rt)
         }
     }
 }
 
-func (this *Server) SetRouterTable(rt *RouterTable) {
-    this.lock.Lock()
-    defer this.lock.Unlock()
-    old, ok := this.services[rt.Service]
-    if ok {
-        if rt.Revision <= old.Revision {
-            log.Println("Attempted to set an equal or older router table for service %s -- skipping", rt.Service)
-            return
-        }
+// Adding a new service.  Note this is NOT threadsafe, should be done during 
+// initialization
+func (this *Server) RegisterService(rt *shards.RouterTable) error {
+    if _, ok := this.services[rt.Service]; ok {
+        return fmt.Errorf("Service already registered %s", rt.Service)
     }
-    this.services[rt.Service] = rt
+
+    service, err := NewService(rt)
+    if err != nil {
+        return err
+    }
+    this.services[rt.Service] = service
+    return nil
 }
 
 // REturns the router table for the specified service
-func (this *Server) RouterTable(service string) (*RouterTable, error) {
-    this.lock.RLock()
-    defer this.lock.RUnlock()
+// If this proxy has only one service registered then 
+// it will use that one
+func (this *Server) Service(service string) (*Service, error) {
     rt, ok := this.services[service]
     if ok {
         return rt, nil
@@ -85,5 +86,64 @@ func (this *Server) RouterTable(service string) (*RouterTable, error) {
 //Start listening
 func (this *Server) Start() {
 
+    this.Bootstrap.InitProcs()
+    //TODO: any other bootstrapping we need?
+
+    log.Println("********** Starting Cheshire Shard Proxy **************")
+    // //now start listening.
+    // if this.Conf.Exists("http.port") {
+    //     port, ok := this.Conf.GetInt("http.port")
+    //     if !ok {
+    //         log.Println("ERROR: Couldn't start http listener ", port)
+    //     } else {
+    //         go HttpListen(port, this.Conf)
+    //     }
+    // }
+
+    if this.Config.Exists("json.port") {
+        port, ok := this.Config.GetInt("json.port")
+        if !ok {
+            log.Println("ERROR: Couldn't start binary listener")
+        } else {
+            go protocollisten(cheshire.JSON, port, this)
+        }   
+    }
+
+    if this.Config.Exists("bin.port") {
+        port, ok := this.Config.GetInt("bin.port")
+        if !ok {
+            log.Println("ERROR: Couldn't start binary listener")
+        } else {
+            go protocollisten(cheshire.BIN, port, this)
+        }   
+    }
+
+    //this just makes the current thread sleep.  kinda stupid currently.
+    //but we should update to get messages from the listeners, like when a listener quites
+    channel := make(chan string)
+    val := <-channel
+    log.Println(val)
 }
 
+
+func protocollisten(protocol cheshire.Protocol, port int, server *Server) error {
+    ln, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+    defer ln.Close()
+    if err != nil {
+        // handle error
+        log.Println(err)
+        return err
+    }
+    log.Printf("%s Listener on port: ", port, protocol.Type())
+    for {
+        conn, err := ln.Accept()
+        if err != nil {
+            log.Print(err)
+            // handle error
+            continue
+        }
+        //TODO: handle hello, and associate to correct service.
+        go HandleShardConns(conn, protocol, server)
+    }
+    return nil
+}

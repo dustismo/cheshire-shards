@@ -31,17 +31,25 @@ func RequestRouterTable(c client.Client) (*RouterTable, error) {
 	return table, nil
 }
 
-// Finds the partition in the params, then
+
+// Finds the partition in the request, then
 //
 // Checks the validity of the partition, and checks that the current node is responsible
 // Also checks whether the partition is locked.
 //
 // This will send the appropriate response on error
 func PartitionParam(txn *cheshire.Txn) (int, bool) {
-	partition, ok := txn.Params().GetInt(P_PARTITION)
-	if !ok {
-		cheshire.SendError(txn, 406, fmt.Sprintf("partition param (%s) is manditory", P_PARTITION))
-		return 0, false
+	partition := 0
+
+	if txn.Request.Shard != nil {
+		partition = txn.Request.Shard.Partition
+	} else {
+		p, ok := txn.Params().GetInt(P_PARTITION)
+		if !ok {
+			cheshire.SendError(txn, 406, fmt.Sprintf("partition param (%s) is manditory", P_PARTITION))
+			return 0, false
+		}
+		partition = p	
 	}
 
 	//check the partition is my responsibility
@@ -65,9 +73,16 @@ func PartitionParam(txn *cheshire.Txn) (int, bool) {
 // if not paramExists, no response is sent and ok is true (revision is not manditory)
 func RouterRevisionParam(txn *cheshire.Txn) (bool, bool) {
 
-	revision, ok := txn.Params().GetInt64(P_REVISION)
-	if !ok {
-		return false, true
+	revision := int64(0)
+
+	if txn.Request.Shard != nil {
+		revision = txn.Request.Shard.Revision
+	} else {
+		r, ok := txn.Params().GetInt64(P_REVISION)
+		if !ok {
+			return false, true
+		}
+		revision = r	
 	}
 
 	rt, err := SM().RouterTable()

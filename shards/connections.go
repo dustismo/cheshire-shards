@@ -20,6 +20,21 @@ type EntryClient struct {
 	clientCreator ClientCreator
 }
 
+// Triggers a reconnect 
+func (this *EntryClient) Reconnect() {
+	this.lock.Lock()
+	defer this.lock.Unlock()
+	//check that lastlook isnt within 5 seconds.
+	t := time.Now().Unix() - this.lastLookup.Unix()
+	if t < 5 {
+		log.Println("Not reconnecting since tried less then 5 seconds ago")
+		return
+	}
+
+	this.created = false
+	this.client.Close()
+}
+
 // Gets the client.
 // This will handle reinitialing the client if it is dead for some reason
 func (this *EntryClient) Client() (client.Client, error) {
@@ -101,6 +116,10 @@ func (this *Connections) InitFromSeed(urls ...string) error {
 	}
 	_, err = this.SetRouterTable(rt)
 	return err
+}
+
+func (this *Connections) Close() {
+	//TODO
 }
 
 func (this *Connections) RouterTable() *RouterTable {

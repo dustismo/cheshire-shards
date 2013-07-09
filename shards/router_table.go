@@ -283,7 +283,7 @@ type RouterEntry struct {
 	Address  string
 	JsonPort int
 	HttpPort int
-	BinPort int
+	BinPort  int
 
 	//list of partitions this entry is responsible for (master only)
 	Partitions []int
@@ -309,7 +309,7 @@ func ToRouterEntry(mp *dynmap.DynMap) (*RouterEntry, error) {
 	e.JsonPort = mp.MustInt("ports.json", 0)
 	e.HttpPort = mp.MustInt("ports.http", 0)
 	e.BinPort = mp.MustInt("ports.bin", 0)
-	
+
 	e.Partitions, ok = mp.GetIntSlice("partitions")
 	if !ok {
 		e.Partitions = make([]int, 0)

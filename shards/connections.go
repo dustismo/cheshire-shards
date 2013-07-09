@@ -20,7 +20,7 @@ type EntryClient struct {
 	clientCreator ClientCreator
 }
 
-// Triggers a reconnect 
+// Triggers a reconnect
 func (this *EntryClient) Reconnect() {
 	this.lock.Lock()
 	defer this.lock.Unlock()

@@ -31,7 +31,6 @@ func RequestRouterTable(c client.Client) (*RouterTable, error) {
 	return table, nil
 }
 
-
 // Finds the partition in the request, then
 //
 // Checks the validity of the partition, and checks that the current node is responsible
@@ -49,7 +48,7 @@ func PartitionParam(txn *cheshire.Txn) (int, bool) {
 			cheshire.SendError(txn, 406, fmt.Sprintf("partition param (%s) is manditory", P_PARTITION))
 			return 0, false
 		}
-		partition = p	
+		partition = p
 	}
 
 	//check the partition is my responsibility
@@ -82,7 +81,7 @@ func RouterRevisionParam(txn *cheshire.Txn) (bool, bool) {
 		if !ok {
 			return false, true
 		}
-		revision = r	
+		revision = r
 	}
 
 	rt, err := SM().RouterTable()

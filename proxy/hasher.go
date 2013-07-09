@@ -1,4 +1,4 @@
-package router
+package proxy
 
 // This hashes a the input string into an int between 0 (inclusive) and max (exclusive)
 type Hasher interface {

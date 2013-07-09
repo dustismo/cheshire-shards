@@ -15,7 +15,7 @@ import (
 
 
 var (
-    config = flag.String("config", "router_config.yaml", "path to the yaml config file")
+    config = flag.String("config", "proxy_config.yaml", "path to the yaml config file")
     seedAddress = flag.String("seed-http-address", "", "http address to seed a service. comma delimit multiple.")
 )
 
@@ -34,7 +34,10 @@ func main() {
     log.Println(*seedAddress)
     addresses := make([]string, 0)
     for _,add := range(strings.Split(*seedAddress, ",")) {
-        addresses = append(addresses, fmt.Sprintf("http://%s",add))
+        if !strings.HasPrefix(add, "http://") {
+            add = fmt.Sprintf("http://%s",add)
+        }
+        addresses = append(addresses, add)
     }
     //now add the services.
     r.Seeds(addresses ...)

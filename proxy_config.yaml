@@ -4,5 +4,6 @@ http:
    port: 8015
 json:
    port: 8014
-
+bin:
+   port: 8013
          

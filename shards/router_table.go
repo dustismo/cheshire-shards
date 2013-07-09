@@ -283,6 +283,7 @@ type RouterEntry struct {
 	Address  string
 	JsonPort int
 	HttpPort int
+	BinPort  int
 
 	//list of partitions this entry is responsible for (master only)
 	Partitions []int
@@ -307,6 +308,8 @@ func ToRouterEntry(mp *dynmap.DynMap) (*RouterEntry, error) {
 
 	e.JsonPort = mp.MustInt("ports.json", 0)
 	e.HttpPort = mp.MustInt("ports.http", 0)
+	e.BinPort = mp.MustInt("ports.bin", 0)
+
 	e.Partitions, ok = mp.GetIntSlice("partitions")
 	if !ok {
 		e.Partitions = make([]int, 0)
@@ -329,7 +332,8 @@ func (this *RouterEntry) Id() string {
 //     "address" : "localhost",
 //     "ports" : {
 //         "json" : 8009,
-//         "http" : 8010
+//         "http" : 8010,
+//	       "bin" : 8011
 //     }
 //     "partitions" : [1,2,3,4,5,6,7,8,9]
 // }
@@ -347,6 +351,11 @@ func (this *RouterEntry) ToDynMap() *dynmap.DynMap {
 	if this.HttpPort > 0 {
 		mp.PutWithDot("ports.http", this.HttpPort)
 	}
+
+	if this.BinPort > 0 {
+		mp.PutWithDot("ports.bin", this.BinPort)
+	}
+
 	mp.Put("id", this.Id())
 	mp.Put("partitions", this.Partitions)
 	this.DynMap = mp

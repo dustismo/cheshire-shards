@@ -118,7 +118,6 @@ func (this *ShardConns) proxy() {
 		case <-this.KillChan:
 			break
 		case resp := <-this.responseChan:
-			// log.Println("Got response!")
 			this.protocol.WriteResponse(resp, this.conn)
 			//check result code for bad router table ect.
 			// check for locks, or other problems
@@ -145,9 +144,11 @@ func (this *ShardConns) proxy() {
 					break
 				}
 				req.Shard.Partition = partition
-				//ready to send upstream
+                //ready to send upstream                
 			}
 			con := this.Partitions[req.Shard.Partition]
+            //set the revision
+            req.Shard.Revision = this.service.RouterTable().Revision
 
 			if con == nil {
 				log.Print("Error no connection for partition %d", req.Shard.Partition)

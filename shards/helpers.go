@@ -40,11 +40,12 @@ func RequestRouterTable(c client.Client) (*RouterTable, error) {
 func PartitionParam(txn *cheshire.Txn) (int, bool) {
 	partition := 0
 
-	if txn.Request.Shard != nil {
+	if txn.Request.Shard != nil && txn.Request.Shard.Partition >= 0 {
 		partition = txn.Request.Shard.Partition
 	} else {
 		p, ok := txn.Params().GetInt(P_PARTITION)
 		if !ok {
+			log.Println("Partition not found1")
 			cheshire.SendError(txn, 406, fmt.Sprintf("partition param (%s) is manditory", P_PARTITION))
 			return 0, false
 		}
@@ -54,10 +55,14 @@ func PartitionParam(txn *cheshire.Txn) (int, bool) {
 	//check the partition is my responsibility
 	ok, locked := SM().MyResponsibility(partition)
 	if locked {
+
+		log.Println("Partition locked")
 		cheshire.SendError(txn, E_PARTITION_LOCKED, fmt.Sprintf("partition is locked"))
 		return 0, false
 	}
 	if !ok {
+
+		log.Println("Not my Partition")
 		cheshire.SendError(txn, E_NOT_MY_PARTITION, fmt.Sprintf("Not my partition"))
 		return 0, false
 	}
@@ -74,7 +79,7 @@ func RouterRevisionParam(txn *cheshire.Txn) (bool, bool) {
 
 	revision := int64(0)
 
-	if txn.Request.Shard != nil {
+	if txn.Request.Shard != nil && txn.Request.Shard.Revision > int64(0) {
 		revision = txn.Request.Shard.Revision
 	} else {
 		r, ok := txn.Params().GetInt64(P_REVISION)

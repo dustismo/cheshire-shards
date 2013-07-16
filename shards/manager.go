@@ -87,6 +87,7 @@ func NewManager(shard Shard, serviceName, dataDir, myEntryId string) *Manager {
 		ServiceName: serviceName,
 		MyEntryId:   myEntryId,
 		shard: shard,
+		lockedPartitions: make(map[int]bool),
 	}
 	//attempt to load from disk
 	err := manager.load()
@@ -129,18 +130,18 @@ func (this *Manager) UnlockPartition(partition int) error {
 
 // Returns the list of partitions I am responsible for
 // returns an empty list if I am not responsible for any
-func (this *Manager) MyPartitions() map[int]bool {
+func (this *Manager) MyPartitions() []int {
 	this.lock.RLock()
 	defer this.lock.RUnlock()
 	if this.connections == nil {
-		return make(map[int]bool, 0)
+		return make([]int, 0)
 	}
 
 	e, ok := this.connections.EntryById(this.MyEntryId)
 	if !ok {
-		return make(map[int]bool, 0)
+		return make([]int, 0)
 	}
-	return e.Entry.PartitionsMap
+	return e.Entry.Partitions
 }
 
 // Checks if this partition is my responsibility.
@@ -151,9 +152,13 @@ func (this *Manager) MyPartitions() map[int]bool {
 func (this *Manager) MyResponsibility(partition int) (bool, bool) {
 	this.lock.RLock()
 	defer this.lock.RUnlock()
-
-	par := this.MyPartitions()
-	_, isMine := par[partition]
+	isMine := false
+	if this.connections != nil {
+		e, ok := this.connections.EntryById(this.MyEntryId)
+		if ok {
+			isMine, _ = e.Entry.PartitionsMap[partition]
+		} 
+	}
 	locked, ok := this.lockedPartitions[partition]
 	if !ok {
 		locked = false

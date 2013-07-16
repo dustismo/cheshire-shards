@@ -58,6 +58,7 @@ func GetRouterTable(txn *cheshire.Txn) {
 }
 
 func SetRouterTable(txn *cheshire.Txn) {
+	log.Println("SETTING NEW Routertable!")
 	rtmap, ok := txn.Params().GetDynMap("router_table")
 	if !ok {
 		cheshire.SendError(txn, 406, "No router_table")
@@ -69,7 +70,7 @@ func SetRouterTable(txn *cheshire.Txn) {
 		cheshire.SendError(txn, 406, fmt.Sprintf("Unparsable router table (%s)", err))
 		return
 	}
-
+	log.Println("HERE!")
 	_, err = SM().SetRouterTable(rt)
 	if err != nil {
 		cheshire.SendError(txn, 406, fmt.Sprintf("Unable to set router table (%s)", err))
@@ -115,13 +116,16 @@ func Unlock(txn *cheshire.Txn) {
 }
 
 func PartitionDelete(txn *cheshire.Txn) {
+	log.Println("Partition DELETE!")
 	partition, ok := txn.Params().GetInt("partition")
 	if !ok {
 		cheshire.SendError(txn, 406, fmt.Sprintf("partition param is manditory"))
 		return
 	}
-
+	log.Println("DELETE")
 	err := SM().shard.DeletePartition(partition)	
+	log.Println("END DELETE")
+
 	if err == nil {
 		cheshire.SendSuccess(txn)
 	} else {
@@ -202,6 +206,8 @@ func PartitionImport(txn *cheshire.Txn) {
 		log.Println("Successfully imported %d bytes for partition %d", bytes, partition)
 		response := cheshire.NewResponse(txn)
 		response.Put("bytes", bytes)
+		response.SetTxnComplete()
+
 		txn.Write(response)
 	case err := <-errorChan:
 		str := fmt.Sprintf("ERROR importing bytes for partition %d -- %s", partition, err)

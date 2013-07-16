@@ -8,6 +8,13 @@ import (
 	"time"
 )
 
+// requests the router table via http from the router table entry
+func RequestRouterTableEntry(entry *RouterEntry) (*RouterTable, error) {
+	c := client.NewHttp(fmt.Sprintf("http://%s:%d",entry.Address, entry.HttpPort))
+	rt, err := RequestRouterTable(c)
+	return rt, err
+}
+
 // Finds the RouterTable from the given client
 //
 func RequestRouterTable(c client.Client) (*RouterTable, error) {
@@ -62,8 +69,9 @@ func PartitionParam(txn *cheshire.Txn) (int, bool) {
 	}
 	if !ok {
 
-		log.Println("Not my Partition")
-		cheshire.SendError(txn, E_NOT_MY_PARTITION, fmt.Sprintf("Not my partition"))
+		str := fmt.Sprintf("Partition %d is not my Partition", partition)
+		log.Println(str)
+		cheshire.SendError(txn, E_NOT_MY_PARTITION, str)
 		return 0, false
 	}
 
@@ -110,3 +118,79 @@ func RouterRevisionParam(txn *cheshire.Txn) (bool, bool) {
 	}
 	return true, false
 }
+
+
+
+// Checkin to an entry.  will update their router table if it is out of date.  will update our router table if out of date.
+// returns the updated router table, updated, error
+// return rt, self updated, remote updated, error
+func RouterTableSync(routerTable *RouterTable, entry *RouterEntry) (*RouterTable, bool, bool, error) {
+        log.Println("ENTRY router table sync, %s", entry.Id())
+        // make sure our routertable is up to date.
+        response, err := client.HttpApiCallSync(
+            fmt.Sprintf("%s:%d", entry.Address, entry.HttpPort),
+            cheshire.NewRequest(CHECKIN, "GET"),
+            5 * time.Second)
+        if err != nil {
+            return routerTable, false, false, fmt.Errorf("ERROR While contacting %s -- %s", entry.Address, err)
+        }
+
+        rev := response.MustInt64("rt_revision", 0)
+        log.Printf("Checkin revision from %s Revision %d", entry.Id(), rev)
+
+        if rev == routerTable.Revision {
+            return routerTable, false, false, nil
+        }
+
+        if rev < routerTable.Revision {
+            //updating remote.
+            //set the new routertable.
+
+            log.Printf("UPDATING router table on %s", entry.Id())
+            req := cheshire.NewRequest(ROUTERTABLE_SET, "POST")
+            req.Params().Put("router_table", routerTable.ToDynMap())
+
+            response, err = client.HttpApiCallSync(
+                fmt.Sprintf("%s:%d", entry.Address, entry.HttpPort),
+                req,
+                5 * time.Second)
+            if err != nil {
+                return routerTable, false, false, fmt.Errorf("ERROR While contacting for router table update %s -- %s", entry.Address, err)
+            }
+            if response.StatusCode() != 200 {
+                return routerTable, false, false, fmt.Errorf("Error trying to Set router table %s -- %s", entry.Address, response.StatusMessage())
+            }
+            return routerTable, false, true, nil
+        } else {
+            //updating local 
+
+            log.Printf("Found updated router table at: %s", entry.Id)
+
+            rt, err := RequestRouterTableEntry(entry)
+            if err != nil {
+                return routerTable, false, false, err
+            }
+
+            // //get the new routertable.
+            // response, err = client.HttpApiCallSync(
+            //     fmt.Sprintf("%s:%d", entry.Address, entry.HttpPort),
+            //     cheshire.NewRequest(shards.ROUTERTABLE_GET, "GET"),
+            //     5 * time.Second)
+            // if err != nil {
+            //     return routerTable, false, false, fmt.Errorf("ERROR While contacting %s -- %s", entry.Address, err)
+            // }
+            // mp, ok := response.GetDynMap("router_table")
+            // if !ok {
+            //     return routerTable, false, false, fmt.Errorf("ERROR from %s -- BAD ROUTER TABLE RESPONSE %s", entry.Address, response)
+            // }
+
+            // rt, err := shards.ToRouterTable(mp)
+            // if err != nil {
+            //     return routerTable, false, false, fmt.Errorf("ERROR While parsing router table %s -- %s", entry.Address, err)
+            // }
+
+            log.Printf("SUCCESSFULLY update router table to revision %d", rt.Revision)
+            routerTable = rt
+            return routerTable, true, false, nil
+        } 
+} 

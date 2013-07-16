@@ -7,7 +7,7 @@
     
     <button class="btn" data-toggle="modal" onclick="syncRouterTable();">Propagate Changes</button>
     
-    <button class="btn" data-toggle="modal" onclick="syncRouterTable();">Rebalance</button>
+    <button class="btn" onclick="rebalance();">Rebalance</button>
   </div>
   <div class="span8">
     <!-- the log -->
@@ -133,6 +133,16 @@
               <p class="help-block"></p>
           </div>
       </div>
+
+      <div class="control-group">
+          <label class="control-label">Bin Port</label>
+          <div class="controls">
+              <input id="json-port" name="bin_port" type="number"
+              class="input-xlarge" value="8011">
+              <p class="help-block"></p>
+          </div>
+      </div>
+
     </div>
   </form>
 <div class="modal-footer">

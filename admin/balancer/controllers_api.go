@@ -40,13 +40,16 @@ func ServiceUpdate(txn *cheshire.Txn) {
     }
     
     for _, e := range(routerTable.Entries) {
-        _, updated, err := EntryCheckin(routerTable, e)
+        _, updatedlocal, updatedremote, err := EntryCheckin(routerTable, e)
         if err != nil {
             Servs.Logger.Printf("Error contacting %s -- %s", e.Id(), err)
             continue
         }
-        if updated {
-            Servs.Logger.Printf("Updated router table %s", e.Id())
+        if updatedremote {
+            Servs.Logger.Printf("Updated router table on %s", e.Id())
+        } else if updatedlocal {
+            Servs.Logger.Printf("Updated local router table from %s", e.Id())
+
         } else {
             Servs.Logger.Printf("Router table upto date on %s", e.Id())
         }
@@ -221,7 +224,7 @@ func ShardNew(txn *cheshire.Txn) {
     Servs.SetRouterTable(routerTable)
 
     Servs.Logger.Printf("Attempting to sending new router table to entry")
-    _, _, err = EntryCheckin(routerTable, entry)
+    _, _, _, err = EntryCheckin(routerTable, entry)
 
     if err != nil {
         Servs.Logger.Printf("ERROR %s", err)

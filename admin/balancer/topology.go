@@ -34,21 +34,22 @@ func UnlockPartition(services *Services, routerTable *shards.RouterTable, partit
 
 // internal lock code shared by unlock and lock. (different endpoints)
 func locking(endpoint string, services *Services, routerTable *shards.RouterTable, partition int) error {
-
+    request := cheshire.NewRequest(endpoint, "POST")
+    request.Params().Put("partition", partition)
     // Lock All partitions
     for _, e := range(routerTable.Entries) {
         response, err := client.HttpApiCallSync(
             fmt.Sprintf("%s:%d", e.Address, e.HttpPort),
-            cheshire.NewRequest(endpoint, "GET"),
+            request,
             5 * time.Second)
         if err != nil {
-            services.Logger.Printf("ERROR While contacting %s -- %s", e.Address, err)
+            services.Logger.Printf("ERROR While contacting %s -- %s", e.Id(), err)
             //TODO: retry?
             continue
         }
         if response.StatusCode() != 200 {
             //TODO: retry?
-            services.Logger.Printf("ERROR While locking partition %s -- %s", e.Address, response.StatusMessage())
+            services.Logger.Printf("ERROR While locking partition %s -- %s", e.Id(), response.StatusMessage())
         }
     }
     return nil
@@ -59,11 +60,9 @@ func locking(endpoint string, services *Services, routerTable *shards.RouterTabl
 // this does not lock, and does not update the router table
 func DeletePartition(services *Services, entry *shards.RouterEntry, partition int) error {
     
-    services.Logger.Printf("DELETING Partition %d From %s", partition, entry.Address)
+    services.Logger.Printf("DELETING Partition %d From %s", partition, entry.Id())
     request := cheshire.NewRequest(shards.PARTITION_DELETE, "DELETE")    
     request.Params().Put("partition", partition)
-
-    services.Logger.Printf("NOW Deleting the partition from the origin server %s", entry.Address)
 
     response, err := client.HttpApiCallSync(
             fmt.Sprintf("%s:%d", entry.Address, entry.HttpPort),
@@ -99,70 +98,10 @@ func EntryContact(entry *shards.RouterEntry) error {
 
 // Checkin to an entry.  will update their router table if it is out of date.  will update our router table if out of date.
 // returns the updated router table, updated, error
-func EntryCheckin(routerTable *shards.RouterTable, entry *shards.RouterEntry) (*shards.RouterTable, bool, error) {
-        log.Println("ENTRY CHECKING, %s", entry)
-        // make sure our routertable is up to date.
-        response, err := client.HttpApiCallSync(
-            fmt.Sprintf("%s:%d", entry.Address, entry.HttpPort),
-            cheshire.NewRequest(shards.CHECKIN, "GET"),
-            5 * time.Second)
-        if err != nil {
-            return routerTable, false, fmt.Errorf("ERROR While contacting %s -- %s", entry.Address, err)
-        }
-
-        rev := response.MustInt64("rt_revision", 0)
-        if rev == routerTable.Revision {
-            return routerTable, false, nil
-        }
-
-        if rev < routerTable.Revision {
-            //updating server.
-            //set the new routertable.
-
-            Servs.Logger.Printf("UPDATING router table on %s", entry.Id())
-            req := cheshire.NewRequest(shards.ROUTERTABLE_SET, "POST")
-            req.Params().Put("router_table", routerTable.ToDynMap())
-
-            response, err = client.HttpApiCallSync(
-                fmt.Sprintf("%s:%d", entry.Address, entry.HttpPort),
-                req,
-                5 * time.Second)
-            if err != nil {
-                return routerTable, false, fmt.Errorf("ERROR While contacting for router table update %s -- %s", entry.Address, err)
-            }
-            if response.StatusCode() != 200 {
-                return routerTable, false, fmt.Errorf("Error trying to Set router table %s -- %s", entry.Address, response.StatusMessage())
-            }
-        } else {
-            //updating local 
-
-            log.Printf("Found updated router table at: %s", entry.Address)
-            //get the new routertable.
-            response, err = client.HttpApiCallSync(
-                fmt.Sprintf("%s:%d", entry.Address, entry.HttpPort),
-                cheshire.NewRequest(shards.ROUTERTABLE_GET, "GET"),
-                5 * time.Second)
-            if err != nil {
-                return routerTable, false, fmt.Errorf("ERROR While contacting %s -- %s", entry.Address, err)
-            }
-            mp, ok := response.GetDynMap("router_table")
-            if !ok {
-                return routerTable, false, fmt.Errorf("ERROR from %s -- BAD ROUTER TABLE RESPONSE %s", entry.Address, response)
-            }
-
-            rt, err := shards.ToRouterTable(mp)
-            if err != nil {
-                return routerTable, false, fmt.Errorf("ERROR While parsing router table %s -- %s", entry.Address, err)
-            }
-
-            log.Printf("SUCCESSFULLY update router table to revision %d", rt.Revision)
-            routerTable = rt
-            return routerTable, true, nil
-
-        } 
-
-
-        return routerTable, false, nil
+// return rt, self updated, remote updated, error
+func EntryCheckin(routerTable *shards.RouterTable, entry *shards.RouterEntry) (*shards.RouterTable, bool, bool, error) {
+    rt, self, remote, err := shards.RouterTableSync(routerTable, entry)
+    return rt, self, remote, err
 } 
 
 // Checks with entries to see if an updated router table is available.
@@ -178,14 +117,17 @@ func RouterTableUpdate(services *Services, routerTable *shards.RouterTable, maxC
 
         checks++
 
-        rt, ud, err := EntryCheckin(routerTable, e)
+        rt, updatelocal, updateremote, err := EntryCheckin(routerTable, e)
         if err != nil {
             services.Logger.Printf("%s", err)
             continue
         }
-        if ud {
+        if updatelocal {
             updated = true
             routerTable = rt
+        }
+        if updateremote {
+            updated = true
         }
     }
     return routerTable, updated
@@ -226,10 +168,10 @@ func CopyData(services *Services, routerTable *shards.RouterTable, partition int
             services.Logger.Printf("Moving partition %d... Moved %d bytes", partition, bytes)
 
             //check for completion
-            if response.TxnStatus() == "complete" {
+            if response.TxnComplete() {
                 // FINISHED!
                 services.Logger.Printf("SUCCESSFULLY Moved partition %d. Moved %d bytes!", partition, bytes)
-                break
+                return bytes, nil
             }
         case err := <- errorChan :
             services.Logger.Printf("ERROR While Moving data from %s -- %s", from.Address, err)
@@ -258,10 +200,13 @@ func MovePartition(services *Services, routerTable *shards.RouterTable, partitio
 
     //copy the data
     _, err = CopyData(services, routerTable, partition, from, to)
+
+    log.Println("Back from copy data!")
     if err != nil {
+        log.Println(err)
         return err
     }
-
+    services.Logger.Printf("Now updating the router table")
     //update the router table.
     parts := make([]int, 0)
     for _,p := range(from.Partitions) {
@@ -271,7 +216,11 @@ func MovePartition(services *Services, routerTable *shards.RouterTable, partitio
     }
     from.Partitions = parts
     to.Partitions = append(to.Partitions, partition)
+    
     routerTable, err = routerTable.AddEntries(from, to)
+
+    services.SetRouterTable(routerTable)
+
     routerTable, ok := RouterTableUpdate(services, routerTable, len(routerTable.Entries)) 
     if !ok {
         services.Logger.Printf("Uh oh, Didnt update any router tables")
@@ -282,7 +231,6 @@ func MovePartition(services *Services, routerTable *shards.RouterTable, partitio
     if err != nil {
         return err
     }
-
     return nil
 }
 
@@ -303,21 +251,23 @@ func RebalanceSingle(services *Services, routerTable *shards.RouterTable) error 
     for i, v := range perm {
         entries[v] = routerTable.Entries[i]
     }
-
     for _, entry := range(entries) {
+        services.Logger.Printf("Entry %s has %d partitions", entry.Id(), len(entry.Partitions))
+
         if len(entry.Partitions) < min {
             if smallest == nil {
                 smallest = entry
             } else if len(entry.Partitions) < len(smallest.Partitions) {
                 smallest = entry
             }
-
+        } else if len(entry.Partitions) > min {
             if largest == nil {
                 largest = entry
             } else if len(entry.Partitions) > len(largest.Partitions) {
                 largest = entry
             }
         }
+
     }
     if smallest == nil || largest == nil || smallest == largest {
         services.Logger.Printf("Cluster appears to be balanced")
@@ -326,6 +276,10 @@ func RebalanceSingle(services *Services, routerTable *shards.RouterTable) error 
     partition := largest.Partitions[0]
     services.Logger.Printf("Moving partition %d from %s to %s", partition, largest.Id(), smallest.Id())
     err := MovePartition(services, routerTable, partition, largest, smallest)
+    if err != nil {
+        services.Logger.Printf("ERROR During move %s", err)    
+    }
+    
     return err
 }
 

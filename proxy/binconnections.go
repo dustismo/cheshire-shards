@@ -108,6 +108,28 @@ func NewShardConns(service *Service, protocol cheshire.Protocol) (*ShardConns, e
 	return sc, nil
 }
 
+// looks through all the connections and tries to obtain an updated routertable.
+func (this *ShardConns) routerTableRequest() {
+	for _, conn := range(this.Conns) {
+		routerTable := this.service.RouterTable()
+
+		rt, local, remote, err := shards.RouterTableSync(routerTable, conn.Entry)
+		if err != nil {
+			log.Printf("Error getting router table from %s -- %s", conn.Entry.Id(), err)
+			continue
+		}
+		if local {
+			this.service.connections.SetRouterTable(rt)
+			return
+		}
+		if remote {
+			log.Printf("Updated the router table on %s", conn.Entry.Id())
+		}
+	}
+
+}
+
+
 // Does the actual proxying
 //
 func (this *ShardConns) proxy() {
@@ -123,8 +145,10 @@ func (this *ShardConns) proxy() {
 			// check for locks, or other problems
 			if resp.StatusCode() == shards.E_ROUTER_TABLE_OLD {
 				// ouch bad routertable..
-				log.Println("TODO! BAD ROUTER TABLE")
-				//TODO!
+				log.Println("BAD ROUTER TABLE")
+				this.routerTableRequest()
+				log.Println("Updated router table.  Closing..")
+				break
 			}
 			// partition is locked!
 			if resp.StatusCode() == shards.E_PARTITION_LOCKED {
@@ -144,6 +168,7 @@ func (this *ShardConns) proxy() {
 					break
 				}
 				req.Shard.Partition = partition
+				// log.Println(partition)
                 //ready to send upstream                
 			}
 			con := this.Partitions[req.Shard.Partition]

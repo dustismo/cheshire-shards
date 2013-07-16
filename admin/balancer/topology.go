@@ -196,110 +196,46 @@ func RouterTableUpdate(services *Services, routerTable *shards.RouterTable, maxC
 // This does not lock the partition, that should happen 
 func CopyData(services *Services, routerTable *shards.RouterTable, partition int, from, to *shards.RouterEntry) (int, error) { 
     //Move the data!
-     moved := 0
-
-    //create a new json connection
-    fromClient := client.NewJson(from.Address, from.JsonPort)
-    err := fromClient.Connect()
-    if err != nil {
-        return moved, err
-    }
-    defer fromClient.Close()
+    moved := 0
     
     toClient := client.NewJson(to.Address, to.JsonPort)
-    err = toClient.Connect()
+    err := toClient.Connect()
     if err != nil {
         return moved, err
     }
     defer toClient.Close()
 
-    request := cheshire.NewRequest(shards.DATA_PULL, "GET")
+    request := cheshire.NewRequest(shards.PARTITION_IMPORT, "POST")
     request.Params().Put("partition", partition)
+    request.Params().Put("source", fmt.Sprintf("http://%s:%d", from.Address, from.HttpPort))
     
     responseChan := make(chan *cheshire.Response, 10)
     errorChan := make(chan error)
 
-    fromClient.ApiCall(
+    toClient.ApiCall(
         request,
         responseChan,
         errorChan,
     )
 
-   
-    toResponseChan := make(chan *cheshire.Response, 10)
-    toErrorChan := make(chan error)
 
     for {
         select {
         case response := <- responseChan :
-            //TODO: send the data to the toClient
-            request := cheshire.NewRequest(shards.DATA_PUSH, "PUT")
-            d, ok := response.GetDynMap("data")
-            if !ok {
-                services.Logger.Printf("ERROR: packet missing data :: %s ", request)
-                continue
-            }
-            request.Params().Put("data", d)
-            request.Params().Put("partition", partition)
-            toClient.ApiCall(
-                request,
-                toResponseChan,
-                toErrorChan,
-            )
-
-            // keep a log of items moved
-            moved++
-            if moved % 100 == 0 {
-                services.Logger.Printf("Moving partition %d... Moved %d objects so far", partition, moved)
-            }
+            bytes := response.MustInt("bytes", 0)
+            services.Logger.Printf("Moving partition %d... Moved %d bytes", partition, bytes)
 
             //check for completion
             if response.TxnStatus() == "complete" {
                 // FINISHED!
-                services.Logger.Printf("SUCCESSFULLY Moved partition %d. Moved %d objects!", partition, moved)
+                services.Logger.Printf("SUCCESSFULLY Moved partition %d. Moved %d bytes!", partition, bytes)
                 break
             }
-
         case err := <- errorChan :
             services.Logger.Printf("ERROR While Moving data from %s -- %s", from.Address, err)
             return moved, err
-
-        case response := <- toResponseChan :
-            if response.StatusCode() != 200 {
-                services.Logger.Printf("ERROR While Moving data from %s -- %s.  \n Continuing...", from.Address, response.StatusMessage())
-            }
-
-            //do nothing, 
-        case err := <- toErrorChan :
-            services.Logger.Printf("ERROR While Moving data to %s -- %s", to.Address, err)
-            return moved, err
         }
     }
-
-    // Now make sure we got responses for all the PUT data ops
-    count := 0
-    for toClient.CurrentInFlight() > 1 {
-        services.Logger.Printf("NOW Waiting for success messages to complete")
-        select {
-            case response := <- toResponseChan :
-            //do nothing, 
-                if response.StatusCode() != 200 {
-                    services.Logger.Printf("ERROR While Moving data to %s -- %s.  \n Continuing...", to.Address, response.StatusMessage())
-                }
-
-            case err := <- toErrorChan :
-                services.Logger.Printf("ERROR While Moving data to %s -- %s", to.Address, err)
-                return moved, err
-            default :
-                if count > 30 {
-                   services.Logger.Printf("GAH. Waited 30 seconds for completion.  there seems to be a problem,.")
-                   return moved, fmt.Errorf("GAH. Waited 30 seconds for completion.  there seems to be a problem.") 
-                }
-                time.Sleep(1*time.Second) 
-        }
-        count++
-    }
-
 
     return moved, err
 }
@@ -383,15 +319,14 @@ func RebalanceSingle(services *Services, routerTable *shards.RouterTable) error 
             }
         }
     }
-    if smallest == nil || largest == nil {
+    if smallest == nil || largest == nil || smallest == largest {
         services.Logger.Printf("Cluster appears to be balanced")
         return nil
     }
-
-    services.Logger.Printf("Moving from %s to %s", largest.Id(), smallest.Id())
-
-
-    return nil
+    partition := largest.Partitions[0]
+    services.Logger.Printf("Moving partition %d from %s to %s", partition, largest.Id(), smallest.Id())
+    err := MovePartition(services, routerTable, partition, largest, smallest)
+    return err
 }
 
 

@@ -13,11 +13,13 @@ func init() {
     cheshire.RegisterApi("/api/log", "GET", ConsoleLog)
     cheshire.RegisterApi("/api/service", "GET", ServiceGet)
     cheshire.RegisterApi("/api/service/update", "GET", ServiceUpdate)
+    cheshire.RegisterApi("/api/service/rebalance", "POST", ServiceRebalance)
     cheshire.RegisterApi("/api/service/sub/checkins", "GET", ServiceCheckins)
     cheshire.RegisterApi("/api/shard/new", "PUT", ShardNew)
 }
 
 func ServiceGet(txn *cheshire.Txn) {
+    log.Println("Service get!")
     routerTable, ok := Servs.RouterTable(txn.Params().MustString("service", ""))
     if !ok {
         cheshire.SendError(txn, 406, "Service param missing or service not found")
@@ -104,18 +106,22 @@ func ServiceCheckins(txn *cheshire.Txn) {
 
 // Handles the rebalance operation. 
 // will push an updated router table everytime it changes.
-func Rebalance(txn *cheshire.Txn) {
-    // routerTable, ok := Servs.RouterTable(txn.Params().MustString("service", ""))
-    // if !ok {
-    //     cheshire.SendError(txn, 406, "Service param missing or service not found")
-    //     return
-    // }
+func ServiceRebalance(txn *cheshire.Txn) {
+    routerTable, ok := Servs.RouterTable(txn.Params().MustString("service", ""))
+    if !ok {
+        cheshire.SendError(txn, 406, "Service param missing or service not found")
+        return
+    }
 
-    
-
-
-
-
+    err := RebalanceSingle(Servs, routerTable)
+    if err != nil {
+        Servs.Logger.Printf("ERROR %s",err)
+        cheshire.SendError(txn, 501, "Problem rebalancing")
+    } else {
+        res := cheshire.NewResponse(txn)
+        res.Put("router_table", routerTable.ToDynMap())
+        txn.Write(res)
+    }
 }
 
 // Gets any logging messages from the Servs.Events

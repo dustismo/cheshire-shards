@@ -102,9 +102,7 @@ func NewShardConns(service *Service, protocol cheshire.Protocol) (*ShardConns, e
 			sc.Partitions[p] = con
 		}
 	}
-
 	go sc.proxy()
-
 	return sc, nil
 }
 
@@ -126,7 +124,6 @@ func (this *ShardConns) routerTableRequest() {
 			log.Printf("Updated the router table on %s", conn.Entry.Id())
 		}
 	}
-
 }
 
 

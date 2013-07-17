@@ -6,8 +6,8 @@ import (
 	"github.com/trendrr/goshire/cheshire"
 	"github.com/trendrr/goshire/client"
 	"github.com/trendrr/goshire/dynmap"
-	"io/ioutil"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"sync"
@@ -21,13 +21,12 @@ type Shard interface {
 	//should send total # of bytes on the finished chanel when complete
 	ExportPartition(partition int, writer io.Writer, finished chan int64, errorChan chan error)
 
-	//Imports data 
+	//Imports data
 	ImportPartition(partition int, reader io.Reader, finished chan int64, errorChan chan error)
 
 	//Deletes the requested partition
 	DeletePartition(partition int) error
 }
-
 
 // A dummy service
 type DummyShard struct {
@@ -62,7 +61,7 @@ type Manager struct {
 	DataDir     string
 	//my entry id.  TODO: need a good way to autodiscover this..
 	MyEntryId        string
-	shard          Shard
+	shard            Shard
 	lockedPartitions map[int]bool
 }
 
@@ -82,11 +81,11 @@ func NewManager(shard Shard, serviceName, dataDir, myEntryId string) *Manager {
 	rtchange := make(chan *RouterTable)
 
 	manager := &Manager{
-		connections: &Connections{RouterTableChange: rtchange},
-		DataDir:     dataDir,
-		ServiceName: serviceName,
-		MyEntryId:   myEntryId,
-		shard: shard,
+		connections:      &Connections{RouterTableChange: rtchange},
+		DataDir:          dataDir,
+		ServiceName:      serviceName,
+		MyEntryId:        myEntryId,
+		shard:            shard,
 		lockedPartitions: make(map[int]bool),
 	}
 	//attempt to load from disk
@@ -157,7 +156,7 @@ func (this *Manager) MyResponsibility(partition int) (bool, bool) {
 		e, ok := this.connections.EntryById(this.MyEntryId)
 		if ok {
 			isMine, _ = e.Entry.PartitionsMap[partition]
-		} 
+		}
 	}
 	locked, ok := this.lockedPartitions[partition]
 	if !ok {

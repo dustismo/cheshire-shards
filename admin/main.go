@@ -1,64 +1,59 @@
 package main
 
 import (
-    "log"
-    "github.com/trendrr/goshire/cheshire"
-    // "github.com/trendrr/goshire-shards/shards"
-    "github.com/trendrr/goshire-shards/admin/balancer"
-    "github.com/trendrr/goshire/cheshire/impl/gocache"
-    "flag"
-    // "time"
-    // "fmt"
+	"github.com/trendrr/goshire/cheshire"
+	"log"
+	// "github.com/trendrr/goshire-shards/shards"
+	"flag"
+	"github.com/trendrr/goshire-shards/admin/balancer"
+	"github.com/trendrr/goshire/cheshire/impl/gocache"
+	// "time"
+	// "fmt"
 )
-
 
 //command line args
 var (
-    configFilename = flag.String("config-filename", "config.yaml", "filename of the config")
-    dataDir = flag.String("data-dir", "data", "The local directory where data should be stored")
+	configFilename = flag.String("config-filename", "config.yaml", "filename of the config")
+	dataDir        = flag.String("data-dir", "data", "The local directory where data should be stored")
 )
 
-
-
 func main() {
-    flag.Parse()
-    bootstrap := cheshire.NewBootstrapFile(*configFilename)
-    
-    //Setup our cache.  this uses the local cache 
-    cache := gocache.New(10, 10)
-    bootstrap.AddFilters(cheshire.NewSession(cache, 3600))
+	flag.Parse()
+	bootstrap := cheshire.NewBootstrapFile(*configFilename)
 
-    balancer.Servs.DataDir = *dataDir
-    balancer.Servs.Load()
+	//Setup our cache.  this uses the local cache
+	cache := gocache.New(10, 10)
+	bootstrap.AddFilters(cheshire.NewSession(cache, 3600))
 
-    // testrt := shards.NewRouterTable("Test")
-    // balancer.Servs.SetRouterTable(testrt)
+	balancer.Servs.DataDir = *dataDir
+	balancer.Servs.Load()
 
-    // //try creating entry
-    // entry := &shards.RouterEntry{
-    //     Address : "localhost",
-    //     JsonPort : 8009,
-    //     HttpPort : 8010,
-    //     Partitions : make([]int, 0),
-    // }
+	// testrt := shards.NewRouterTable("Test")
+	// balancer.Servs.SetRouterTable(testrt)
 
-    // log.Println("********************* ADD ENTRY")
-    // testrt.AddEntries(entry)
+	// //try creating entry
+	// entry := &shards.RouterEntry{
+	//     Address : "localhost",
+	//     JsonPort : 8009,
+	//     HttpPort : 8010,
+	//     Partitions : make([]int, 0),
+	// }
 
-    //
-    log.Println("Starting")
-    // go func() {
-    //     c := time.Tick(5 * time.Second)
-    //     for now := range c {
-    //         str := fmt.Sprintf("%v %s\n", now, "Something something")
-    //         balancer.Servs.Logger.Emit("test", str)
-    //         balancer.Servs.Logger.Println("TESTING LOG")
-    //     }    
-    // }()
-    
+	// log.Println("********************* ADD ENTRY")
+	// testrt.AddEntries(entry)
 
-    //starts listening on all configured interfaces
-    bootstrap.Start()
-    
+	//
+	log.Println("Starting")
+	// go func() {
+	//     c := time.Tick(5 * time.Second)
+	//     for now := range c {
+	//         str := fmt.Sprintf("%v %s\n", now, "Something something")
+	//         balancer.Servs.Logger.Emit("test", str)
+	//         balancer.Servs.Logger.Println("TESTING LOG")
+	//     }
+	// }()
+
+	//starts listening on all configured interfaces
+	bootstrap.Start()
 
 }

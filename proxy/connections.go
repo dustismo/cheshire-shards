@@ -108,7 +108,7 @@ func NewShardConns(service *Service, protocol cheshire.Protocol) (*ShardConns, e
 
 // looks through all the connections and tries to obtain an updated routertable.
 func (this *ShardConns) routerTableRequest() {
-	for _, conn := range(this.Conns) {
+	for _, conn := range this.Conns {
 		routerTable := this.service.RouterTable()
 
 		rt, local, remote, err := shards.RouterTableSync(routerTable, conn.Entry)
@@ -125,7 +125,6 @@ func (this *ShardConns) routerTableRequest() {
 		}
 	}
 }
-
 
 // Does the actual proxying
 //
@@ -166,11 +165,11 @@ func (this *ShardConns) proxy() {
 				}
 				req.Shard.Partition = partition
 				// log.Println(partition)
-                //ready to send upstream                
+				//ready to send upstream
 			}
 			con := this.Partitions[req.Shard.Partition]
-            //set the revision
-            req.Shard.Revision = this.service.RouterTable().Revision
+			//set the revision
+			req.Shard.Revision = this.service.RouterTable().Revision
 
 			if con == nil {
 				log.Print("Error no connection for partition %d", req.Shard.Partition)

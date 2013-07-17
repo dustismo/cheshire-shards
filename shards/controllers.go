@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"github.com/trendrr/goshire/cheshire"
 	"log"
-	"time"
 	"net/http"
+	"time"
 )
 
 //the global shard manager
@@ -123,7 +123,7 @@ func PartitionDelete(txn *cheshire.Txn) {
 		return
 	}
 	log.Println("DELETE")
-	err := SM().shard.DeletePartition(partition)	
+	err := SM().shard.DeletePartition(partition)
 	log.Println("END DELETE")
 
 	if err == nil {
@@ -147,7 +147,7 @@ func PartitionExport(txn *cheshire.Txn) {
 		cheshire.SendError(txn, 406, fmt.Sprintf("partition param is manditory"))
 		return
 	}
-	
+
 	finishedChan := make(chan int64)
 	errorChan := make(chan error)
 
@@ -181,12 +181,11 @@ func PartitionImport(txn *cheshire.Txn) {
 	if !ok {
 		cheshire.SendError(txn, 406, fmt.Sprintf("source param is manditory"))
 		return
-	}	
-
+	}
 
 	//issue the import request..
 	address := fmt.Sprintf("%s%s?partition=%d", source, PARTITION_EXPORT, partition)
-	log.Println("Attempting to import partition %d from %s",partition, address)
+	log.Println("Attempting to import partition %d from %s", partition, address)
 
 	resp, err := http.Get(address)
 	if err != nil {
@@ -197,7 +196,7 @@ func PartitionImport(txn *cheshire.Txn) {
 
 	finishedChan := make(chan int64)
 	errorChan := make(chan error)
-	
+
 	defer resp.Body.Close()
 
 	go SM().shard.ImportPartition(partition, resp.Body, finishedChan, errorChan)

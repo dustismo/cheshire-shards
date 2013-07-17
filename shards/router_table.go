@@ -70,6 +70,7 @@ func (this *RouterTable) Rebuild() (*RouterTable, error) {
 	}
 	this.TotalPartitions = total
 	mp := this.toDynMap()
+
 	table, err := ToRouterTable(mp)
 	if err != nil {
 		return nil, err
@@ -89,6 +90,7 @@ func (this *RouterTable) AddEntries(entry ...*RouterEntry) (*RouterTable, error)
 
 	entries := make([]*RouterEntry, 0)
 
+	//build a new entries array with every *except the ones we are adding
 	for _, e := range routerTable.Entries {
 		//check if this entry matches any of the entries we are adding.
 		found := false
@@ -101,7 +103,6 @@ func (this *RouterTable) AddEntries(entry ...*RouterEntry) (*RouterTable, error)
 			entries = append(entries, e)
 		}
 	}
-
 	//now add the new ones
 	for _, en := range entry {
 		entries = append(entries, en)
@@ -290,9 +291,6 @@ type RouterEntry struct {
 
 	//Map of all the partitions this entry is responsible for.  true indicates master, false otherwise
 	PartitionsMap map[int]bool
-
-	//this entry serialized as a DynMap
-	DynMap *dynmap.DynMap
 }
 
 // Creates a new router entry from the dynmap passed in
@@ -317,7 +315,6 @@ func ToRouterEntry(mp *dynmap.DynMap) (*RouterEntry, error) {
 	for _, p := range e.Partitions {
 		e.PartitionsMap[p] = true
 	}
-	e.DynMap = e.ToDynMap()
 	return e, nil
 }
 
@@ -338,10 +335,6 @@ func (this *RouterEntry) Id() string {
 //     "partitions" : [1,2,3,4,5,6,7,8,9]
 // }
 func (this *RouterEntry) ToDynMap() *dynmap.DynMap {
-	if this.DynMap != nil && len(this.DynMap.Map) > 0 {
-		return this.DynMap
-	}
-
 	mp := dynmap.NewDynMap()
 	mp.Put("address", this.Address)
 	if this.JsonPort > 0 {
@@ -358,6 +351,5 @@ func (this *RouterEntry) ToDynMap() *dynmap.DynMap {
 
 	mp.Put("id", this.Id())
 	mp.Put("partitions", this.Partitions)
-	this.DynMap = mp
 	return mp
 }

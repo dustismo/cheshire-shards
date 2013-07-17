@@ -35,14 +35,14 @@ const (
 	// Creates a stream of data for the given partition
 	// @param partition the int partition
 	// data is in the key "data"
-	DATA_PULL = "/__c/data/pull"
+	PARTITION_EXPORT = "/__c/pt/export"
 
-	// Push data at the given partition
-	// the pushed data should overwrite any data that exists at the given key
-	// @method PUT
-	// @param data the data object (usually a json packet)
-	// @param partition the partition
-	DATA_PUSH = "/__c/data/push"
+	// Initializes an import request between two shards
+	//
+	// @method POST
+	// @param partition the partition to import data
+	// @param source the http address to pull data from in the form http://address:port
+	PARTITION_IMPORT = "/__c/pt/import"
 )
 
 //These are the required return error codes for various situations

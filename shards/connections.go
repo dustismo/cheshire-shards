@@ -188,7 +188,6 @@ func (this *Connections) SetRouterTable(table *RouterTable) (*RouterTable, error
 		key := e.Id()
 		entry, ok := this.entries[key]
 		if !ok {
-			log.Printf("Creating entry %s", e)
 			entry = this.createEntryClient(e)
 		}
 		delete(this.entries, key)

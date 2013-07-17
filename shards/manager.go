@@ -6,6 +6,7 @@ import (
 	"github.com/trendrr/goshire/cheshire"
 	"github.com/trendrr/goshire/client"
 	"github.com/trendrr/goshire/dynmap"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -14,32 +15,34 @@ import (
 )
 
 // You must implement this interface in order for balancing to work
-type Service interface {
+type Shard interface {
 
-	//Gets all the data for a specific partition
-	//should send total # of items on the finished chanel when complete
-	Data(partition int, dataChan chan *dynmap.DynMap, finished chan int, errorChan chan error)
+	//Exports all the data for a specific partition
+	//should send total # of bytes on the finished chanel when complete
+	ExportPartition(partition int, writer io.Writer, finished chan int64, errorChan chan error)
 
-	//Imports a data item
-	SetData(partition int, data *dynmap.DynMap)
+	//Imports data
+	ImportPartition(partition int, reader io.Reader, finished chan int64, errorChan chan error)
 
 	//Deletes the requested partition
 	DeletePartition(partition int) error
 }
 
 // A dummy service
-type DummyService struct {
+type DummyShard struct {
 }
 
-func (this *DummyService) Data(partition int, dataChan chan *dynmap.DynMap, finished chan int, errorChan chan error) {
-	log.Printf("Requesting Data from dummy service, ignoring.. (partition: %d)", partition)
+func (this *DummyShard) ExportPartition(partition int, writer io.Writer, finished chan int64, errorChan chan error) {
+	log.Printf("Requesting Export from dummy service, ignoring.. (partition: %d)", partition)
+	finished <- int64(0)
 }
 
-func (this *DummyService) SetData(partition int, data *dynmap.DynMap) {
-	log.Printf("Requesting SetData from dummy service, ignoring.. (partition: %d),(data: %s)", partition, data)
+func (this *DummyShard) ImportPartition(partition int, reader io.Reader, finished chan int64, errorChan chan error) {
+	log.Printf("Requesting Import from dummy service, ignoring.. (partition: %d),(reader: %s)", partition, reader)
+	finished <- int64(0)
 }
 
-func (this *DummyService) DeletePartition(partition int) error {
+func (this *DummyShard) DeletePartition(partition int) error {
 	log.Printf("Requesting DeletePartiton from dummy service, ignoring.. (partition: %d)", partition)
 	return nil
 }
@@ -58,15 +61,15 @@ type Manager struct {
 	DataDir     string
 	//my entry id.  TODO: need a good way to autodiscover this..
 	MyEntryId        string
-	service          Service
+	shard            Shard
 	lockedPartitions map[int]bool
 }
 
 // Creates a new manager.  Uses the one or more seed urls to download the
 // routing table.
-func NewManagerSeed(service Service, serviceName, dataDir, myEntryId string, seedHttpUrls ...string) (*Manager, error) {
+func NewManagerSeed(shard Shard, serviceName, dataDir, myEntryId string, seedHttpUrls ...string) (*Manager, error) {
 	//TODO: can we get the servicename from the routing table?
-	manager := NewManager(service, serviceName, dataDir, myEntryId)
+	manager := NewManager(shard, serviceName, dataDir, myEntryId)
 	err := manager.connections.InitFromSeed(seedHttpUrls...)
 	//we still return the manager since it is usable just doesnt have a routing table.
 	return manager, err
@@ -74,14 +77,16 @@ func NewManagerSeed(service Service, serviceName, dataDir, myEntryId string, see
 
 //Creates a new manager.  will load the routing table from disk if
 //it exists
-func NewManager(service Service, serviceName, dataDir, myEntryId string) *Manager {
+func NewManager(shard Shard, serviceName, dataDir, myEntryId string) *Manager {
 	rtchange := make(chan *RouterTable)
 
 	manager := &Manager{
-		connections: &Connections{RouterTableChange: rtchange},
-		DataDir:     dataDir,
-		ServiceName: serviceName,
-		MyEntryId:   myEntryId,
+		connections:      &Connections{RouterTableChange: rtchange},
+		DataDir:          dataDir,
+		ServiceName:      serviceName,
+		MyEntryId:        myEntryId,
+		shard:            shard,
+		lockedPartitions: make(map[int]bool),
 	}
 	//attempt to load from disk
 	err := manager.load()
@@ -124,18 +129,18 @@ func (this *Manager) UnlockPartition(partition int) error {
 
 // Returns the list of partitions I am responsible for
 // returns an empty list if I am not responsible for any
-func (this *Manager) MyPartitions() map[int]bool {
+func (this *Manager) MyPartitions() []int {
 	this.lock.RLock()
 	defer this.lock.RUnlock()
 	if this.connections == nil {
-		return make(map[int]bool, 0)
+		return make([]int, 0)
 	}
 
 	e, ok := this.connections.EntryById(this.MyEntryId)
 	if !ok {
-		return make(map[int]bool, 0)
+		return make([]int, 0)
 	}
-	return e.Entry.PartitionsMap
+	return e.Entry.Partitions
 }
 
 // Checks if this partition is my responsibility.
@@ -146,9 +151,13 @@ func (this *Manager) MyPartitions() map[int]bool {
 func (this *Manager) MyResponsibility(partition int) (bool, bool) {
 	this.lock.RLock()
 	defer this.lock.RUnlock()
-
-	par := this.MyPartitions()
-	_, isMine := par[partition]
+	isMine := false
+	if this.connections != nil {
+		e, ok := this.connections.EntryById(this.MyEntryId)
+		if ok {
+			isMine, _ = e.Entry.PartitionsMap[partition]
+		}
+	}
 	locked, ok := this.lockedPartitions[partition]
 	if !ok {
 		locked = false
@@ -158,8 +167,8 @@ func (this *Manager) MyResponsibility(partition int) (bool, bool) {
 
 //Sets the service for this manager
 //this should only be called once at initialization.  it is not threadsafe
-func (this *Manager) SetService(par Service) {
-	this.service = par
+func (this *Manager) SetShard(par Shard) {
+	this.shard = par
 }
 
 // Does a checkin with the requested client.  returns the

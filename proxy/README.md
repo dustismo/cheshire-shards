@@ -10,3 +10,5 @@ If router table changes we disconnect the client
 
 We pass bytes from each shard to the client, we only parse the responses in order to 
 check for sharding error conditions (bad router table ect).  Even those responses get passed through to the client unchanged. 
+
+

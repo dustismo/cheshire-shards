@@ -111,7 +111,7 @@ func (this *Server) Start() {
 		if !ok {
 			log.Println("ERROR: Couldn't start binary listener")
 		} else {
-			go protocollisten(cheshire.BIN, port, this)
+			go binarylisten(port, this)
 		}
 	}
 
@@ -120,6 +120,35 @@ func (this *Server) Start() {
 	channel := make(chan string)
 	val := <-channel
 	log.Println(val)
+}
+
+func binarylisten(port int, server *Server) {
+	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+	defer ln.Close()
+	if err != nil {
+		// handle error
+		log.Println(err)
+		return
+	}
+	proxy := &BinProxy{
+
+	}
+
+	log.Printf("Binary Proxy Listener on port: %d", port)
+	for {
+		conn, err := ln.Accept()
+
+		log.Printf("ACCEPT! %s", conn)
+		if err != nil {
+			log.Print(err)
+			// handle error
+			continue
+		}
+
+
+		//TODO: handle hello, and associate to correct service.
+		go proxy.StartProxy(conn, server)
+	}
 }
 
 func protocollisten(protocol cheshire.Protocol, port int, server *Server) error {

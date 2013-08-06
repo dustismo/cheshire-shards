@@ -97,6 +97,10 @@ func (this *Server) Start() {
 	//     }
 	// }
 
+	if len(this.services) == 0 {
+		log.Fatal("NO Services available to proxy.  Exiting..")
+	}
+
 	if this.Config.Exists("json.port") {
 		port, ok := this.Config.GetInt("json.port")
 		if !ok {

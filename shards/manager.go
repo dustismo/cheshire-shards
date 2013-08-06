@@ -92,6 +92,8 @@ func NewManager(shard Shard, serviceName, dataDir, myEntryId string) *Manager {
 	err := manager.load()
 	if err != nil {
 		log.Println(err)
+		log.Println("Unable to load router table, setting dummy routertable")
+		manager.SetRouterTable(NewRouterTable(serviceName))
 	}
 	// Save whenever the routertable is changed.
 	go func() {

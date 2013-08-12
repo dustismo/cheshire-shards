@@ -4,6 +4,8 @@ import (
 	// "time"
 	"fmt"
 	"github.com/trendrr/goshire/dynmap"
+	"github.com/trendrr/goshire/cheshire"
+
 	"time"
 )
 
@@ -49,6 +51,54 @@ func NewRouterTable(service string) *RouterTable {
 		TotalPartitions:   512,
 		ReplicationFactor: 1,
 	}
+}
+
+// Creates a default router table from the server setup
+// This is so we dont have to prime the router table from the admin
+// page when we want to first test..
+func NewDefaultRouterTable(service string, conf *cheshire.ServerConfig) (*RouterTable, error) {
+	rt := NewRouterTable(service)
+	//create new router entry
+	entry := dynmap.New()
+	jsonPort, ok := conf.GetInt("ports.json")
+	if !ok {
+		return nil, fmt.Errorf("No ports.json in server config")
+	}
+	entry.PutWithDot("ports.json", jsonPort)
+
+
+	httpPort, ok := conf.GetInt("ports.http")
+	if !ok {
+		return nil, fmt.Errorf("No ports.http in server config")
+	}
+	entry.PutWithDot("ports.http", httpPort)
+	
+	binPort, ok := conf.GetInt("ports.bin")
+	if !ok {
+		return nil, fmt.Errorf("No ports.bin in server config")
+	}
+	entry.PutWithDot("ports.bin", binPort)
+
+	broadcastAddress,ok := conf.GetString("broadcast_address")
+	if !ok {
+		return nil, fmt.Errorf("No broadcast_address found in server config")
+	}
+
+	entry.Put("address", broadcastAddress)
+
+	partitions := make([]int, 512)
+	//add all partitions
+	for i :=0; i <512; i++{
+		partitions[i] = i
+	}
+	entry.Put("partitions", partitions)
+
+	e, err := ToRouterEntry(entry)
+	if err != nil {
+		return nil, err
+	}
+	rt, err = rt.AddEntries(e)
+	return rt, err
 }
 
 // updates the revision to now

@@ -7,6 +7,7 @@ import(
     "fmt"
     "log"
     "github.com/trendrr/goshire-shards/shards"
+    "time"
 )
 // New proxy implementation
 
@@ -25,6 +26,14 @@ type resp struct {
     // the response to be pushed upstream
     // a true response indecates, success.  false indecates failure 
     continueChan chan bool
+}
+
+func NewResp(response *cheshire.Response, reader io.Reader) *resp {
+    return &resp{
+        response : response,
+        reader : reader,
+        continueChan : make(chan bool, 1),
+    }
 }
 
 type Protocol interface {
@@ -104,7 +113,7 @@ func NewProxy(service *Service, protocol Protocol) (*Proxy, error) {
             //TODO: fail or keep going?
             continue
         }
-        con.start()
+        go con.start()
         px.Conns = append(px.Conns, con)
 
         for _, p := range e.Partitions {
@@ -147,10 +156,7 @@ func (this *Proxy) start() {
             }
 
             //alert the resp that it can continue reading.
-            select {
-            case resp.continueChan <- true:
-            default:
-            }
+            resp.continueChan <- true
         }
     }
 }
@@ -210,12 +216,19 @@ func (this *Conn) start() {
         res, err := decoder.DecodeResponse()
         if err == io.EOF {
             log.Print(err)
-            break
+            return
         } else if err != nil {
             log.Print(err)
-            break
+            return
         }
+
         this.proxy.responseChan <- res
+        select {
+        case <-res.continueChan:
+        case <- time.After(10 * time.Second):
+            log.Println("Took more then 10 seconds to parse response, #dies")
+            return
+        }
     }
 }
 

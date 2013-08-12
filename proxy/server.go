@@ -101,8 +101,8 @@ func (this *Server) Start() {
 		log.Fatal("NO Services available to proxy.  Exiting..")
 	}
 
-	if this.Config.Exists("json.port") {
-		port, ok := this.Config.GetInt("json.port")
+	if this.Config.Exists("ports.json") {
+		port, ok := this.Config.GetInt("ports.json")
 		if !ok {
 			log.Println("ERROR: Couldn't start binary listener")
 		} else {
@@ -110,8 +110,8 @@ func (this *Server) Start() {
 		}
 	}
 
-	if this.Config.Exists("bin.port") {
-		port, ok := this.Config.GetInt("bin.port")
+	if this.Config.Exists("ports.bin") {
+		port, ok := this.Config.GetInt("ports.bin")
 		if !ok {
 			log.Println("ERROR: Couldn't start binary listener")
 		} else {

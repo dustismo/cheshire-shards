@@ -54,12 +54,11 @@ func (this *BinProxyDecoder) DecodeResponse() (*resp, error) {
 
     res := &cheshire.Response{}
     res.SetTxnId(txnId)
+    // log.Println("TXN ID ",  txnId)
+    // log.Println("status ", txnStatus)
     res.SetTxnStatus(cheshire.TXN_STATUS[int(txnStatus)])
     res.SetStatusCode(int(statusCode))
-    return &resp{
-        response : res,
-        reader : this.reader,
-    }, nil
+    return NewResp(res, this.reader), nil
 }
 
 
@@ -75,7 +74,6 @@ func (this *BinProxy) WriteResponse(response *resp, writer io.Writer) error {
 // [length (int32)][params (array)]
 // [content_encoding (int8)]
 // [content_length (int32)][content (array)]
-
     cheshire.WriteString(writer, response.response.TxnId())
     //txn status
     txnStatus, ok := cheshire.BINCONST.TxnStatus[response.response.TxnStatus()]
@@ -86,7 +84,6 @@ func (this *BinProxy) WriteResponse(response *resp, writer io.Writer) error {
     if err != nil {
         return err
     }
-
     err = binary.Write(writer, binary.BigEndian, int16(response.response.StatusCode()))
     if err != nil {
         return err
@@ -121,7 +118,6 @@ func (this *BinProxy) WriteResponse(response *resp, writer io.Writer) error {
     if err != nil {
         return err
     }
-
     return nil
 }
 
@@ -139,6 +135,8 @@ func (this *BinProxy) StartProxy(connection io.ReadWriteCloser, server *Server) 
         return
     }
     px, err := NewProxy(service, this)
+    px.clientConn = connection
+
     if err != nil {
         log.Printf("Error in start proxy %s", err)
         return
@@ -153,10 +151,8 @@ func (this *BinProxy) StartProxy(connection io.ReadWriteCloser, server *Server) 
 func (this *BinProxy) Listen(proxy *Proxy) {
     defer proxy.Close()
     decoder := cheshire.BIN.NewDecoder(proxy.clientConn).(*cheshire.BinDecoder)
-
     //now listen for incoming.
     for {
-
         shardReq, err := decoder.DecodeShardRequest()
         if err == io.EOF {
             log.Print(err)
@@ -173,6 +169,7 @@ func (this *BinProxy) Listen(proxy *Proxy) {
             break
         }
         shardReq.Partition = partition
+        // log.Printf("Partition %d", partition)
         //find the connection
         con, err := proxy.Conn(partition)
         if err != nil {
@@ -231,9 +228,7 @@ func (this *BinProxy) Listen(proxy *Proxy) {
         }
 
         //SUCCESS!
-
     }
-    log.Println("RETURNING!")
     return 
 }
 

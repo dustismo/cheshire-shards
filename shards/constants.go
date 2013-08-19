@@ -47,17 +47,19 @@ const (
 
 //These are the required return error codes for various situations
 const (
+	// We reserve 630-640 for router table issues
+
 	// return when the requester has an old router table
-	E_ROUTER_TABLE_OLD = 432
+	E_ROUTER_TABLE_OLD = 632
 
 	// requester has a newer router table then us, request they update ours
-	E_SEND_ROUTER_TABLE = 433
+	E_SEND_ROUTER_TABLE = 633
 
 	// the requested partition is locked.  requester should try back in a bit
-	E_PARTITION_LOCKED = 434
+	E_PARTITION_LOCKED = 634
 
 	// The requested partition does not live on this shard
-	E_NOT_MY_PARTITION = 435
+	E_NOT_MY_PARTITION = 635
 )
 
 // Param Names

@@ -150,6 +150,13 @@ func (this *Proxy) start() {
                 log.Println("Updated router table.  Closing..")
                 break
             }
+
+            if resp.response.StatusCode() == shards.E_SEND_ROUTER_TABLE {
+                //The server has an older router table then us.  
+                // we need to send to them 
+                // TODO
+            }
+
             // partition is locked!
             if resp.response.StatusCode() == shards.E_PARTITION_LOCKED {
                 //TODO: ?

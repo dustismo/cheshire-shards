@@ -7,6 +7,7 @@ import(
     "io"
     "fmt"
     "log"
+    "bufio"
     "github.com/trendrr/goshire/cheshire"
     "github.com/trendrr/goshire/dynmap"
 
@@ -96,7 +97,7 @@ func (this *BinProxy) WriteResponse(response *resp, writer io.Writer) error {
     }
 
     //param encoding
-    _, err = io.CopyN(writer, response.reader, 1)
+    err = cheshire.CopyN(writer, response.reader, 1)
     if err != nil {
         return err
     }
@@ -108,7 +109,7 @@ func (this *BinProxy) WriteResponse(response *resp, writer io.Writer) error {
     }
     
     //content encoding
-    _, err = io.CopyN(writer, response.reader, 1)
+    err = cheshire.CopyN(writer, response.reader, 1)
     if err != nil {
         return err
     }
@@ -118,6 +119,13 @@ func (this *BinProxy) WriteResponse(response *resp, writer io.Writer) error {
     if err != nil {
         return err
     }
+
+
+    //flush if this is buffered
+    if fl, ok := writer.(cheshire.Flusher); ok {
+       fl.Flush()
+    }
+
     return nil
 }
 
@@ -135,7 +143,8 @@ func (this *BinProxy) StartProxy(connection io.ReadWriteCloser, server *Server) 
         return
     }
     px, err := NewProxy(service, this)
-    px.clientConn = connection
+    px.closer = connection
+    px.clientConn = bufio.NewReadWriter(bufio.NewReader(connection), bufio.NewWriter(connection))
 
     if err != nil {
         log.Printf("Error in start proxy %s", err)
@@ -185,7 +194,7 @@ func (this *BinProxy) Listen(proxy *Proxy) {
 
         //txn id 
         // method
-        _, err = io.CopyN(con.Connection, proxy.clientConn, 2)
+        err = cheshire.CopyN(con.Connection, proxy.clientConn, 2)
         if err != nil {
             log.Print(err)
             break 
@@ -199,7 +208,7 @@ func (this *BinProxy) Listen(proxy *Proxy) {
         }
 
         //param encoding
-        _, err = io.CopyN(con.Connection, proxy.clientConn, 1)
+        err = cheshire.CopyN(con.Connection, proxy.clientConn, 1)
         if err != nil {
             log.Print(err)
             break 
@@ -214,7 +223,7 @@ func (this *BinProxy) Listen(proxy *Proxy) {
 
 
         //content encoding
-        _, err = io.CopyN(con.Connection, proxy.clientConn, 1)
+        err = cheshire.CopyN(con.Connection, proxy.clientConn, 1)
         if err != nil {
             log.Print(err)
             break 
@@ -228,6 +237,13 @@ func (this *BinProxy) Listen(proxy *Proxy) {
         }
 
         //SUCCESS!
+
+        // flush if this is buffered
+        
+        //flush if this is buffered
+        if fl, ok := con.Connection.(cheshire.Flusher); ok {
+           fl.Flush()
+        }
     }
     return 
 }
@@ -242,7 +258,8 @@ func (this *BinProxy) NewConn(proxy *Proxy, entry *shards.RouterEntry) (*Conn, e
     }
     cheshire.BIN.WriteHello(conn, dynmap.New())
     return &Conn {
-        Connection : conn, 
+        Closer : conn,
+        Connection : bufio.NewReadWriter(bufio.NewReader(conn), bufio.NewWriter(conn)),
         Entry : entry,
         Port   : port,
         proxy  : proxy,

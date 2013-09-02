@@ -62,7 +62,8 @@ type Proxy struct {
     protocol Protocol 
 
     //the outgoing connection (to client)
-    clientConn io.ReadWriteCloser
+    clientConn io.ReadWriter
+    closer io.Closer
     KillChan chan bool
     responseChan chan *resp
 
@@ -78,7 +79,12 @@ func (this *Proxy) Conn(partition int) (*Conn, error) {
     if partition >= len(this.Partitions) || partition < 0 {
         return nil, fmt.Errorf("Partition out of range!")
     }
-    return this.Partitions[partition], nil
+    con := this.Partitions[partition]
+    if con == nil {
+        return nil, fmt.Errorf("No connection available at partition %d", partition)
+    }
+
+    return con, nil
 }
 
 func (this *Proxy) Partition(req cheshire.ShardRequest) (int, error) {
@@ -199,7 +205,7 @@ func (this *Proxy) Close() {
 }
 
 func (this *Proxy) close() {
-    this.clientConn.Close()
+    this.closer.Close()
     for _, c := range this.Conns {
         c.Close()
     }
@@ -210,7 +216,8 @@ func (this *Proxy) close() {
 
 // Single connection to the 
 type Conn struct {
-    Connection   io.ReadWriteCloser
+    Closer io.Closer
+    Connection   io.ReadWriter
     Entry    *shards.RouterEntry
     Port    int 
     proxy    *Proxy
@@ -240,7 +247,7 @@ func (this *Conn) start() {
 }
 
 func (this *Conn) Close() {
-    this.Connection.Close()
+    this.Closer.Close()
 }
 
 

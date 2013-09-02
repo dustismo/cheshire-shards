@@ -70,6 +70,9 @@ const (
 	// The version of the router table
 	P_REVISION = "_v"
 
+	//The shard key, should only be used when passing to a proxy
+	P_SHARD_KEY = "_sk"
+	
 	//The query type.
 	// This defines how the request can be handled by the router.
 	// Possible values:

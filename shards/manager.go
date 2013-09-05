@@ -75,6 +75,35 @@ func NewManagerSeed(shard Shard, serviceName, dataDir, myEntryId string, seedHtt
 	return manager, err
 }
 
+// Creates a new manager based on the server config.
+// This is the one you should probably use, when it doubt
+func NewManagerConfig(shard Shard, conf *cheshire.ServerConfig)	(*Manager, error) {
+	serviceName, ok := conf.GetString("shards.service")
+	if !ok {
+		return nil, fmt.Errorf("No shards.service found in server config")
+	}
+
+	broadcastAddress,ok := conf.GetString("broadcast_address")
+	if !ok {
+		return nil, fmt.Errorf("No broadcast_address found in server config")
+	}
+
+
+	id := fmt.Sprintf("%s:%d", broadcastAddress, conf.MustInt("ports.json", 8009))
+	dataDir := conf.MustString("data_dir", "data")
+	manager := NewManager(shard, serviceName, dataDir, id)
+	rt, err := manager.RouterTable()
+	if err != nil || rt.Revision == int64(0) {
+		//set the dummy router table.
+		rt, err = NewDefaultRouterTable(serviceName, conf)
+		if err != nil {
+			return nil, err
+		}
+		manager.SetRouterTable(rt)
+	}
+	return manager, nil
+}
+
 //Creates a new manager.  will load the routing table from disk if
 //it exists
 func NewManager(shard Shard, serviceName, dataDir, myEntryId string) *Manager {
@@ -92,6 +121,8 @@ func NewManager(shard Shard, serviceName, dataDir, myEntryId string) *Manager {
 	err := manager.load()
 	if err != nil {
 		log.Println(err)
+		// log.Println("Unable to load router table, setting dummy routertable")
+		// manager.SetRouterTable(NewRouterTable(serviceName))
 	}
 	// Save whenever the routertable is changed.
 	go func() {

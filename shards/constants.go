@@ -9,6 +9,7 @@ const (
 	//  "strest" :{...}
 	//  "router_table" : <the router table>
 	// }
+	// @method GET
 	ROUTERTABLE_GET = "/__c/rt/get"
 
 	// Sets the router table on this server
@@ -16,10 +17,17 @@ const (
 	// @param router_table The router table
 	ROUTERTABLE_SET = "/__c/rt/set"
 
+	// @method POST
+	// @param partition
 	PARTITION_LOCK   = "/__c/pt/lock"
+	
+	// @method POST
+	// @param partition
 	PARTITION_UNLOCK = "/__c/pt/unlock"
 
 	// Delete a partition from this server
+	// @method DELETE
+	// @param partition
 	PARTITION_DELETE = "/__c/pt/delete"
 
 	// Is a ping endpoint to check for liveness and
@@ -30,11 +38,13 @@ const (
 	//  "ts" : <ISOFORMATED TIMESTAMP>
 	//  "rt_revision" : <router table revision>
 	// }
+	// @method GET
+	//
 	CHECKIN = "/__c/checkin"
 
 	// Creates a stream of data for the given partition
 	// @param partition the int partition
-	// data is in the key "data"
+	// @method GET
 	PARTITION_EXPORT = "/__c/pt/export"
 
 	// Initializes an import request between two shards

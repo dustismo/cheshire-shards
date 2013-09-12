@@ -11,6 +11,9 @@ import (
 	"time"
 )
 
+
+
+
 //
 // Handles a set of connections to all the shards in the cluster
 //
@@ -40,7 +43,7 @@ func HandleShardConns(conn net.Conn, protocol cheshire.Protocol, server *Server)
 
 	reader := bufio.NewReader(conn)
 	decoder := protocol.NewDecoder(reader)
-	err := decoder.DecodeHello()
+	_, err := decoder.DecodeHello()
 	if err != nil {
 		return err
 	}
@@ -224,7 +227,7 @@ func NewShardConn(entry *shards.RouterEntry, parent *ShardConns) (*ShardConn, er
 	if err != nil {
 		return nil, err
 	}
-	parent.protocol.WriteHello(conn)
+	parent.protocol.WriteHello(conn, nil)
 	sc := &ShardConn{
 		Reader: bufio.NewReader(conn),
 		Writer: conn,

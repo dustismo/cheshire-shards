@@ -31,6 +31,7 @@ func main() {
 
     r := proxy.NewServerFile(*config)
 
+    log.Println("Loading from seeds")
     log.Println(*seedAddress)
     addresses := make([]string, 0)
     for _,add := range(strings.Split(*seedAddress, ",")) {
@@ -42,6 +43,7 @@ func main() {
     //now add the services.
     r.Seeds(addresses ...)
     
+
 
     log.Println("Starting")
     //starts listening on all configured interfaces

@@ -9,6 +9,7 @@ const (
 	//  "strest" :{...}
 	//  "router_table" : <the router table>
 	// }
+	// @method GET
 	ROUTERTABLE_GET = "/__c/rt/get"
 
 	// Sets the router table on this server
@@ -16,10 +17,17 @@ const (
 	// @param router_table The router table
 	ROUTERTABLE_SET = "/__c/rt/set"
 
+	// @method POST
+	// @param partition
 	PARTITION_LOCK   = "/__c/pt/lock"
+	
+	// @method POST
+	// @param partition
 	PARTITION_UNLOCK = "/__c/pt/unlock"
 
 	// Delete a partition from this server
+	// @method DELETE
+	// @param partition
 	PARTITION_DELETE = "/__c/pt/delete"
 
 	// Is a ping endpoint to check for liveness and
@@ -30,11 +38,13 @@ const (
 	//  "ts" : <ISOFORMATED TIMESTAMP>
 	//  "rt_revision" : <router table revision>
 	// }
+	// @method GET
+	//
 	CHECKIN = "/__c/checkin"
 
 	// Creates a stream of data for the given partition
 	// @param partition the int partition
-	// data is in the key "data"
+	// @method GET
 	PARTITION_EXPORT = "/__c/pt/export"
 
 	// Initializes an import request between two shards
@@ -47,17 +57,19 @@ const (
 
 //These are the required return error codes for various situations
 const (
+	// We reserve 630-640 for router table issues
+
 	// return when the requester has an old router table
-	E_ROUTER_TABLE_OLD = 432
+	E_ROUTER_TABLE_OLD = 632
 
 	// requester has a newer router table then us, request they update ours
-	E_SEND_ROUTER_TABLE = 433
+	E_SEND_ROUTER_TABLE = 633
 
 	// the requested partition is locked.  requester should try back in a bit
-	E_PARTITION_LOCKED = 434
+	E_PARTITION_LOCKED = 634
 
 	// The requested partition does not live on this shard
-	E_NOT_MY_PARTITION = 435
+	E_NOT_MY_PARTITION = 635
 )
 
 // Param Names
@@ -68,6 +80,9 @@ const (
 	// The version of the router table
 	P_REVISION = "_v"
 
+	//The shard key, should only be used when passing to a proxy
+	P_SHARD_KEY = "_sk"
+	
 	//The query type.
 	// This defines how the request can be handled by the router.
 	// Possible values:

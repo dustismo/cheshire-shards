@@ -1,7 +1,7 @@
 <div class="container">
 <div class="btn-toolbar">
     <button class="btn btn-primary" href="#newService" data-toggle="modal">New Service</button>
-    <!--<button class="btn">Import From Seed</button>-->
+    <button class="btn" href="#importService" data-toggle="modal">Import From Seed</button>
 </div>
 <div class="well">
     <table class="table table-striped">
@@ -103,6 +103,32 @@
     </div>
   </form>
 </div>
+
+<!-- import from seed modal -->
+<div id="importService" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+    <h3 id="myModalLabel">Import Service</h3>
+  </div>
+  <form class="form-horizontal" action="/service/import" method="post">
+    <div class="modal-body">
+      <!-- full-name input-->
+      <div class="control-group">
+          <label class="control-label">Service Name</label>
+          <div class="controls">
+              <input id="service-name" name="seed" type="text" placeholder="http://seedurl:port/" required="true"
+              class="input-xlarge">
+              <p class="help-block">This should be an http url for one of the nodes in the service</p>
+          </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" data-dismiss="modal" aria-hidden="true">Close</button>
+      <button class="btn btn-primary">Save</button>
+    </div>
+  </form>
+</div>
+
 
 <script>
   $(document).ready(function() {

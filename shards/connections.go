@@ -190,6 +190,7 @@ func (this *Connections) SetRouterTable(table *RouterTable) (*RouterTable, error
 		if !ok {
 			entry = this.createEntryClient(e)
 		}
+		entry.Entry = e
 		delete(this.entries, key)
 		c[key] = entry
 	}
@@ -209,8 +210,10 @@ func (this *Connections) SetRouterTable(table *RouterTable) (*RouterTable, error
 				return nil, fmt.Errorf("Could not get connection for entry %d", e.Id())
 			}
 			entries = append(entries, val)
+			// log.Printf("Adding entry %s to partition %d", val.Entry.Address, i)		
 		}
 		connections[i] = entries
+		// log.Printf("partition: %d , entries_size %d", i, len(entries))
 	}
 
 	//now close any Clients for removed entries

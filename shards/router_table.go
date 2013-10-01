@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/trendrr/goshire/dynmap"
 	"github.com/trendrr/goshire/cheshire"
-
+	"log"
 	"time"
 )
 
@@ -250,6 +250,7 @@ func ToRouterTable(mp *dynmap.DynMap) (*RouterTable, error) {
 				entries[i] = entriesPartition[pRep[i-1]]
 				e.PartitionsMap[pRep[i-1]] = false
 			}
+			// log.Println("EntriesPartition %p, entries %s", p, entries)
 			t.EntriesPartition[p] = entries
 		}
 	}
@@ -295,6 +296,11 @@ func (this *RouterTable) ToDynMap() *dynmap.DynMap {
 
 //gets the partitions that should replicate this master.
 func (this *RouterTable) repPartitions(partition int, entry *RouterEntry) ([]int, error) {
+	if true {
+		return make([]int, 0), nil
+	}
+	//TODO: There is something wrong with the following logic..
+
 	//This method could be much better optimized, but
 	//it is fairly rare, so we wont worry about it..
 	entries := make([]int, 0)

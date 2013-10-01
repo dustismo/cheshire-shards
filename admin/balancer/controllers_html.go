@@ -3,6 +3,8 @@ package balancer
 import (
 	"fmt"
 	"github.com/trendrr/goshire/cheshire"
+	"github.com/trendrr/goshire/client"
+	"github.com/trendrr/goshire-shards/shards"
 	"log"
 )
 
@@ -10,6 +12,7 @@ func init() {
 	cheshire.RegisterHtml("/", "GET", Index)
 	cheshire.RegisterHtml("/service/delete", "POST", DeleteService)
 	cheshire.RegisterHtml("/service/new", "POST", NewService)
+	cheshire.RegisterHtml("/service/import", "POST", ImportService)
 	cheshire.RegisterHtml("/service", "GET", Service)
 	cheshire.RegisterHtml("/log", "GET", Log)
 }
@@ -35,6 +38,22 @@ func DeleteService(txn *cheshire.Txn) {
 
 	Servs.Remove(name)
 	cheshire.Redirect(txn, "/index")
+}
+
+func ImportService(txn *cheshire.Txn) {
+	url, ok := txn.Params().GetString("seed")
+	if !ok {
+		cheshire.Flash(txn, "error", "Seed Url is manditory")
+	}
+	rt, err := shards.RequestRouterTable(client.NewHttp(url))
+	if err != nil {
+		cheshire.Flash(txn, "error", fmt.Sprintf("%s", err))
+		cheshire.Redirect(txn, "/index")
+		return
+	}
+	Servs.SetRouterTable(rt)
+	cheshire.Flash(txn, "success", "successfully created router table")
+	cheshire.Redirect(txn, fmt.Sprintf("/service?name=%s", rt.Service))
 }
 
 func NewService(txn *cheshire.Txn) {

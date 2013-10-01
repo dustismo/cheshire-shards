@@ -33,7 +33,7 @@
           <th>Address</th>
           <th>Http Port</th>
           <th>Json Port</th>
-          <th>Last Checkin</th>
+          <th>Bin Port</th>
           <th>Partitions</th>
         </tr>
       </thead>
@@ -43,7 +43,7 @@
               <td>{{address}}</td>
               <td>{{ports.http}}</td>
               <td>{{ports.json}}</td>
-              <td>{{last_seen_at}}</td>
+              <td>{{ports.bin}}</td>
               <td>
                 {{#each partitions}}
                   <span>{{this}} ,</span> 
@@ -90,7 +90,6 @@
               <td>
                 {{#partition_keys}}
                   {{.}}<br />
-
                 {{/partition_keys}}
               </td>
           </tr>

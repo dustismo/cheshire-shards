@@ -177,10 +177,17 @@ func ShardNew(txn *cheshire.Txn) {
 		return
 	}
 
+	binPort, ok := txn.Params().GetInt("bin_port")
+	if !ok {
+		cheshire.SendError(txn, 406, "bin_port param missing")
+		return
+	}
+
 	entry := &shards.RouterEntry{
 		Address:    address,
 		JsonPort:   jsonPort,
 		HttpPort:   httpPort,
+		BinPort: binPort,
 		Partitions: make([]int, 0),
 	}
 

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/trendrr/goshire/dynmap"
 	"github.com/trendrr/goshire/cheshire"
-	"log"
+	// "log"
 	"time"
 )
 

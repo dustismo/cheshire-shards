@@ -158,12 +158,12 @@ func CopyData(services *Services, routerTable *shards.RouterTable, partition int
 		select {
 		case response := <-responseChan:
 			bytes := response.MustInt("bytes", 0)
-			services.Logger.Printf("Moving partition %d... Moved %d bytes", partition, bytes)
+			services.Logger.Printf("Moving partition %d...", partition)
 
 			//check for completion
 			if response.TxnComplete() {
 				// FINISHED!
-				services.Logger.Printf("SUCCESSFULLY Moved partition %d. Moved %d bytes!", partition, bytes)
+				services.Logger.Printf("SUCCESSFULLY Moved partition %d!", partition)
 				return bytes, nil
 			}
 		case err := <-errorChan:

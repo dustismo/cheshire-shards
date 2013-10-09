@@ -113,15 +113,24 @@ func ServiceRebalance(txn *cheshire.Txn) {
 		return
 	}
 
-	err := RebalanceSingle(Servs, routerTable)
-	if err != nil {
-		Servs.Logger.Printf("ERROR %s", err)
-		cheshire.SendError(txn, 501, "Problem rebalancing")
-	} else {
+	maxPartition := txn.Params().MustInt("max", 1)
+	for i := 0; i < maxPartition; i++ {
+		err := RebalanceSingle(Servs, routerTable)
+		if err != nil {
+			Servs.Logger.Printf("ERROR %s", err)
+			cheshire.SendError(txn, 501, "Problem rebalancing")
+			return
+		}
 		res := cheshire.NewResponse(txn)
+		res.SetTxnContinue()
+		//Write the new router table.
 		res.Put("router_table", routerTable.ToDynMap())
+
 		txn.Write(res)
+		time.Sleep(3 * time.Second)
 	}
+	
+	
 }
 
 // Gets any logging messages from the Servs.Events

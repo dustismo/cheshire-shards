@@ -4,10 +4,10 @@
     <!-- The service fields -->
     <div id="service"></div>
     <button class="btn btn-primary" href="#newService" data-toggle="modal">New Shard</button>
-    
+    <!--
     <button class="btn" data-toggle="modal" onclick="syncRouterTable();">Propagate Changes</button>
-    
-    <button class="btn" onclick="rebalance();">Rebalance</button>
+    -->
+    <button class="btn" href="#rebalanceModal" data-toggle="modal">Rebalance</button>
   </div>
   <div class="span8">
     <!-- the log -->
@@ -97,6 +97,34 @@
   </table>
 </script>
 <%={{ }}=%>
+
+
+<!-- Rebalance dialog -->
+<div id="rebalanceModal" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+    <h3 id="myModalLabel">Rebalance</h3>
+  </div>
+  <form id="rebalance-form" class="form-horizontal">
+    <input type="hidden" name="service" value="{{service}}" />
+    <div class="modal-body">
+      
+      <div class="control-group">
+          <label class="control-label">Max Partitions to Move</label>
+          <div class="controls">
+              <input id="max" name="max" type="number"
+              class="input-xlarge" value="1">
+              <p class="help-block">This is the maximum number of partitions we will move for this rebalance operation</p>
+          </div>
+      </div>
+    </div>
+  </form>
+<div class="modal-footer">
+      <button class="btn" data-dismiss="modal" aria-hidden="true">Close</button>
+      <button class="btn btn-primary" onclick="rebalance();" data-dismiss="modal">Rebalance</button>
+    </div>
+</div>
+
 
 <!-- The add new entry form -->
 <div id="newService" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
@@ -219,7 +247,7 @@
 
   $(document).ready(function() {
     strest = new Strest( {
-        url : "ws://localhost:8000/ws",
+        url : "ws://" + window.location.host + "/ws",
         onopen : function(event) {
                 log.message("sysmsg", "CONNECTED!")
                 //register for the log messages
@@ -245,10 +273,12 @@
   });
 
   rebalance = function() {
+    var params = Strest.formToObject($('#rebalance-form'));
+
     strest.sendRequest({
       uri : "/api/service/rebalance",
       method : "POST",
-      params : {service : "{{service}}"}
+      params : params
     }, 
     RTResponse,
     function(err) {

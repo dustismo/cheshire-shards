@@ -13,7 +13,7 @@ import (
 
 //command line args
 var (
-	configFilename = flag.String("config-filename", "config.yaml", "filename of the config")
+	configFilename = flag.String("config", "goshire_admin.yaml", "filename of the config")
 	dataDir        = flag.String("data-dir", "data", "The local directory where data should be stored")
 )
 
